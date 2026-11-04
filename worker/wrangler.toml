@@ -2,6 +2,11 @@ name = "pdf-insight-api"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
 
+# Public endpoint: https://pdf-insight-api.kqjqxb.workers.dev
+workers_dev = true
+# No per-version preview URLs: every public URL must go through the same CORS and rate limits.
+preview_urls = false
+
 # Public, non-secret configuration only. ALLOWED_ORIGIN may be a comma-separated list (exact matches).
 # GEMINI_API_KEY is a secret: `wrangler secret put GEMINI_API_KEY` (prod) or worker/.dev.vars (local).
 [vars]
