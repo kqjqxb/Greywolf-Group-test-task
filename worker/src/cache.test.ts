@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sampleResult } from '../../src/lib/fixtures/sample-result';
+import { PROMPT_VERSION } from './ai/prompt';
 import {
   CACHE_TTL_SECONDS,
   cacheKey,
@@ -9,7 +10,19 @@ import {
 } from './cache';
 import { FakeKv } from './testing/fakeKv';
 
+/** SHA-256 hex of a string, computed independently of cacheKey. */
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 describe('cacheKey', () => {
+  it('includes the prompt version, so a new prompt misses entries of the previous one', async () => {
+    const key = await cacheKey('Umowa nr 14');
+    expect(key).toBe(`result:${await sha256Hex(`${PROMPT_VERSION}\nUmowa nr 14`)}`);
+    expect(key).not.toBe(`result:${await sha256Hex('1.1.0\nUmowa nr 14')}`);
+  });
+
   it('is a SHA-256 hex digest, stable for trivially different text', async () => {
     const key = await cacheKey('Umowa nr 14\r\nStrona 1  \n');
     expect(key).toMatch(/^result:[0-9a-f]{64}$/);

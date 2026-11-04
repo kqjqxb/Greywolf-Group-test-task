@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { compareIsoDates } from '../../../src/lib/isoDate';
 import type { AmountSchema, DateEntrySchema } from '../../../src/lib/schema';
 
 /**
@@ -42,17 +43,19 @@ export function dedupeAmounts(amounts: readonly Amount[]): Amount[] {
 }
 
 /**
- * Exactly one entry per calendar date: entries with the same date are merged, their distinct
- * contexts joined with "; ". The result is sorted chronologically (ISO dates sort as strings).
+ * Exactly one entry per date: entries with the same date string are merged and every distinct
+ * event is kept, joined with "; ". A context the model already merged ("a; b") is split first,
+ * so merging it with "b" gives "a; b", not "a; b; b". "2026-10" (month only) and "2026-10-15"
+ * are different entries. The result is sorted chronologically, a month before its days.
  */
 export function mergeDates(dates: readonly DateEntry[]): DateEntry[] {
   const contextsByDate = new Map<string, string[]>();
   for (const entry of dates) {
     const contexts = contextsByDate.get(entry.date) ?? [];
-    contexts.push(entry.context);
+    contexts.push(...entry.context.split(';'));
     contextsByDate.set(entry.date, contexts);
   }
   return [...contextsByDate.entries()]
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .sort(([a], [b]) => compareIsoDates(a, b))
     .map(([date, contexts]) => ({ date, context: dedupeStrings(contexts).join('; ') }));
 }

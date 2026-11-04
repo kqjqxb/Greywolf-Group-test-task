@@ -40,6 +40,12 @@ describe('formatDate', () => {
     expect(formatDate('2027-04-01')).toBe('1 kwietnia 2027');
   });
 
+  it('formats a year-month (no day) as the month in the nominative and the year', () => {
+    expect(formatDate('2026-10')).toBe('październik 2026');
+    expect(formatDate('2024-03')).toBe('marzec 2024');
+    expect(formatDate('2025-01')).toBe('styczeń 2025');
+  });
+
   it('returns invalid input unchanged', () => {
     expect(formatDate('nie-data')).toBe('nie-data');
   });

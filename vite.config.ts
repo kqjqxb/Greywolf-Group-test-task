@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => {
     base: '/Greywolf-Group-test-task/',
     plugins: [react(), cspPlugin(env.VITE_API_URL || DEFAULT_API_URL)],
     test: {
-      include: ['src/**/*.test.ts', 'worker/**/*.test.ts'],
+      include: ['src/**/*.test.ts', 'worker/**/*.test.ts', 'eval/**/*.test.ts'],
     },
   };
 });

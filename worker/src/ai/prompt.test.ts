@@ -5,6 +5,8 @@ import {
   DOCUMENT_END,
   DOCUMENT_START,
   neutralizeDelimiters,
+  PROMPT_VERSION,
+  SUMMARY_SYSTEM_INSTRUCTION,
   SYSTEM_INSTRUCTION,
 } from './prompt';
 
@@ -54,5 +56,50 @@ describe('buildRetryPrompt', () => {
     const prompt = buildRetryPrompt(['problem A', 'problem B']);
     expect(prompt).toContain('- problem A');
     expect(prompt).toContain('- problem B');
+  });
+});
+
+describe('SYSTEM_INSTRUCTION rules (prompt 1.2.0)', () => {
+  it('has version 1.2.0', () => {
+    expect(PROMPT_VERSION).toBe('1.2.0');
+  });
+
+  it('requires every text value, including date and amount contexts, in the document language', () => {
+    expect(SYSTEM_INSTRUCTION).toContain('EVERY text value');
+    expect(SYSTEM_INSTRUCTION).toContain('every dates[].context');
+    expect(SYSTEM_INSTRUCTION).toContain('every amounts[].context');
+    expect(SYSTEM_INSTRUCTION).toContain('never copy their language');
+  });
+
+  it('has no Polish example phrases that could set the output language', () => {
+    for (const phrase of [
+      'zawarcie umowy',
+      'początek obowiązywania',
+      'wynagrodzenie za wdrożenie',
+    ]) {
+      expect(SYSTEM_INSTRUCTION).not.toContain(phrase);
+    }
+  });
+
+  it('keeps month-year dates as YYYY-MM, skips year-only dates and never invents a day', () => {
+    expect(SYSTEM_INSTRUCTION).toContain('only month and year known -> "YYYY-MM"');
+    expect(SYSTEM_INSTRUCTION).toContain('only a year known -> skip');
+    expect(SYSTEM_INSTRUCTION).toContain('Never invent a day');
+    expect(SYSTEM_INSTRUCTION).toContain('DD/MM/YYYY');
+    expect(SYSTEM_INSTRUCTION).not.toContain('Skip dates without a known day, month and year');
+  });
+
+  it('requires every event on a shared date in its context', () => {
+    expect(SYSTEM_INSTRUCTION).toContain('must name EVERY event on that date');
+  });
+
+  it('excludes products and platforms from organizations', () => {
+    expect(SYSTEM_INSTRUCTION).toContain('NOT products, platforms, app stores');
+    expect(SYSTEM_INSTRUCTION).toContain('"App Store", "Google Play"');
+  });
+
+  it('forbids mentioning missing information in the summaries', () => {
+    expect(SYSTEM_INSTRUCTION).toContain('Never mention information that is missing');
+    expect(SUMMARY_SYSTEM_INSTRUCTION).toContain('never mention information that is missing');
   });
 });
