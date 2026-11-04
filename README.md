@@ -118,7 +118,7 @@ npm run worker:dev              # http://localhost:8787
 | worker (bindingi) | `PDF_INSIGHT_KV`, `ANALYZE_RATE_LIMITER` | cache + licznik budżetu, rate limit |
 
 ### Skrypty
-`lint` · `typecheck` (app, config, worker, eval) · `test` (Vitest, 295 testów) · `build` · `format:check` · `worker:dev` · `worker:deploy` · `eval`
+`lint` · `typecheck` (app, config, worker, eval) · `test` (Vitest, 325 testów) · `build` · `format:check` · `worker:dev` · `worker:deploy` · `eval`
 
 CI (`.github/workflows/deploy.yml`): lint › typecheck › test › build › deploy na GitHub Pages. Worker deployowany ręcznie (`npm run worker:deploy`).
 
