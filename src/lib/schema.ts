@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 /**
  * CONTRACT between frontend and worker (docs/BRIEF.md, section "Schemat wyniku").
- * Owned by the orchestrator: stage agents must not change shapes here without approval.
- * Fields may be added, never removed (brief rule).
+ * Both sides import this file, so a change here changes the API for both; results saved in the
+ * browser history are validated with it too. Fields may be added, never removed (brief rule).
  */
 
 /** Body of `POST /analyze`, sent by the frontend and validated by the worker. */
@@ -26,15 +26,36 @@ const IsoDate = z.iso.date();
  */
 const IsoDateOrMonth = z.union([IsoDate, z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)]);
 
-/** ISO 4217 currency code, e.g. "PLN". */
-const CurrencyCode = z.string().regex(/^[A-Z]{3}$/);
+/**
+ * ISO 4217 codes known to the runtime (Workers and current browsers), or null when
+ * `Intl.supportedValuesOf` is missing (older browsers) — then only the shape is checked.
+ */
+export function knownCurrencies(intl: Pick<typeof Intl, 'supportedValuesOf'> = Intl) {
+  if (!('supportedValuesOf' in intl)) {
+    return null;
+  }
+  try {
+    return new Set(intl.supportedValuesOf('currency'));
+  } catch {
+    return null;
+  }
+}
+const KNOWN_CURRENCIES: ReadonlySet<string> | null = knownCurrencies();
+
+/** ISO 4217 currency code, e.g. "PLN": three capital letters and, when the list is available, a real code. */
+const CurrencyCode = z
+  .string()
+  .regex(/^[A-Z]{3}$/)
+  .refine((code) => KNOWN_CURRENCIES?.has(code) ?? true, {
+    message: 'Must be an ISO 4217 currency code, e.g. "PLN", "EUR", "USD".',
+  });
 
 export const DocumentInfoSchema = z.object({
   /** Filled by the worker from the request, never by the model. */
   fileName: z.string().min(1),
   /** Filled by the worker from the request, never by the model. */
   pages: z.number().int().positive(),
-  /** ISO 639-1, lowercase, e.g. "pl". */
+  /** ISO 639-1, lowercase, e.g. "pl". Shape only: Intl has no list of language codes to check against. */
   language: z.string().regex(/^[a-z]{2}$/),
   type: z.enum(DOCUMENT_TYPES),
   title: z.string().min(1).nullable(),

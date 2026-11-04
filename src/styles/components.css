@@ -234,7 +234,7 @@
   background: var(--surface-glass);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  /* Solid border: a dashed one rendered with a gap in the rounded corner (owner's bug #2). */
+  /* Solid border: a dashed one rendered with a visible gap in the rounded corner. */
   border: 1.5px solid var(--border-strong);
   border-radius: var(--radius-dropzone);
   box-shadow: var(--shadow);
@@ -363,7 +363,7 @@
   line-height: 1.5;
 }
 
-/* Clearly visible numbers (owner's bug #3): primary on a soft tint, AA in both themes. */
+/* Clearly visible numbers (faint ones were easy to miss): primary on a soft tint, AA in both themes. */
 .steps__number {
   display: inline-grid;
   place-items: center;

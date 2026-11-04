@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { formatDateTime, formatDocumentType } from '../lib/format';
 import type { HistoryEntry } from '../lib/history';
-import { formatRelativeTime } from './displayFormat';
+import { formatRelativeTime } from '../lib/displayFormat';
 import { TrashIcon } from './icons';
 
 interface HistoryListProps {

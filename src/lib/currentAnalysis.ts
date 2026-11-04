@@ -1,7 +1,7 @@
 import type { HistoryEntry, HistoryStorage } from './history';
 
 /**
- * Lets the shown result survive a page reload (Stage 6).
+ * Lets the shown result survive a page reload.
  * The result itself is already saved in the history (localStorage, F-09); here we keep only the
  * id of the entry on screen, in sessionStorage: it is per tab and disappears with the tab, so
  * a new tab starts empty. No cookies: they are limited to 4 KB and sent to the server.
