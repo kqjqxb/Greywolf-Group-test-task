@@ -59,8 +59,12 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 - [x] Iteracje promptu z wersjonowaniem (`worker/src/prompt.ts`, changelog w AI_LOG)
 
 ### Etap 6 — UX i dostępność (≈2 h)
-- [ ] Responsywność od 360 px, focus states, obsługa klawiaturą, kontrast WCAG AA
-- [ ] `aria-live` dla stanów ładowania/błędu
+- [x] Responsywność od 360 px, focus states, obsługa klawiaturą, kontrast WCAG AA (Etapy 2–4)
+- [x] `aria-live` dla stanów ładowania/błędu
+- [ ] Wynik przetrwa odświeżenie strony: bieżąca analiza z historii (localStorage) + wskaźnik w `sessionStorage` (nie cookies: limit 4 KB i wysyłanie do serwera)
+- [ ] Ostrzeżenie `beforeunload` tylko w trakcie analizy (odczyt / OCR / AI) — po zapisaniu wyniku zbędne
+- [ ] Motyw jasny/ciemny: automatycznie wg `prefers-color-scheme` + przełącznik zapamiętany lokalnie, kontrast AA w obu
+- [ ] (COULD, po oddaniu) Interfejs po angielsku — brief wymaga komunikatów po polsku, więc PL zostaje domyślny
 
 ### Etap 7 — Dokumentacja i oddanie (≈2 h)
 - [ ] README: demo, zrzut ekranu, architektura (diagram), decyzje, uruchomienie lokalne, env, ograniczenia
