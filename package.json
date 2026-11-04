@@ -16,6 +16,7 @@
     "worker:deploy": "wrangler deploy --config worker/wrangler.toml"
   },
   "dependencies": {
+    "pdfjs-dist": "^6.5.438",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zod": "^4.6.7"

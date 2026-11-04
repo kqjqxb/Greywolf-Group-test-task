@@ -1,28 +1,68 @@
-import { z } from 'zod';
+import { AppError } from '../lib/errors';
+import {
+  AnalyzeResponseSchema,
+  ApiErrorSchema,
+  type AnalysisResult,
+  type AnalyzeRequest,
+} from '../lib/schema';
 import { API_URL } from './config';
 
-/** How long `checkHealth` waits before treating the API as unreachable. */
-export const HEALTH_TIMEOUT_MS = 5000;
-
-const HealthResponseSchema = z.object({ ok: z.literal(true) });
+/** How long `analyze` waits for the worker before giving up. */
+export const ANALYZE_TIMEOUT_MS = 30_000;
 
 /**
- * Calls `GET /health` on the worker.
- * Resolves to true only for a 2xx response with body `{ ok: true }`; any network error,
- * timeout or unexpected body resolves to false (never throws).
+ * Dev-only mock (see .env.example). `import.meta.env.DEV` is the literal `false` in
+ * production builds, so this branch and the mock module are removed from the bundle.
  */
-export async function checkHealth(timeoutMs: number = HEALTH_TIMEOUT_MS): Promise<boolean> {
+const USE_MOCK_API = import.meta.env.DEV && import.meta.env.VITE_MOCK_API === '1';
+
+async function send(body: string, signal: AbortSignal): Promise<Response> {
+  if (USE_MOCK_API) {
+    const { mockFetch } = await import('./mock');
+    return mockFetch(body, signal);
+  }
+  return fetch(`${API_URL}/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+    signal,
+  });
+}
+
+/**
+ * Calls `POST /analyze`. The response is never trusted: it must match AnalyzeResponseSchema,
+ * otherwise a known `{ error }` body is mapped to its code and anything else is `invalid_response`.
+ * Always throws AppError on failure: an ApiErrorCode, `network`, `timeout` or `invalid_response`.
+ */
+export async function analyze(
+  request: AnalyzeRequest,
+  timeoutMs: number = ANALYZE_TIMEOUT_MS,
+): Promise<AnalysisResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(`${API_URL}/health`, { signal: controller.signal });
-    if (!response.ok) {
-      return false;
+    let response: Response;
+    try {
+      response = await send(JSON.stringify(request), controller.signal);
+    } catch {
+      throw new AppError(controller.signal.aborted ? 'timeout' : 'network');
     }
-    const body: unknown = await response.json();
-    return HealthResponseSchema.safeParse(body).success;
-  } catch {
-    return false;
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new AppError(controller.signal.aborted ? 'timeout' : 'invalid_response');
+    }
+
+    if (response.ok) {
+      const parsed = AnalyzeResponseSchema.safeParse(body);
+      if (parsed.success) {
+        return parsed.data.result;
+      }
+    }
+    const apiError = ApiErrorSchema.safeParse(body);
+    throw new AppError(apiError.success ? apiError.data.error : 'invalid_response');
   } finally {
     clearTimeout(timer);
   }
