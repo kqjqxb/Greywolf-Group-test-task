@@ -3,7 +3,9 @@
  * Used by the worker to enforce "summary = 3–5 sentences"; pure, so the frontend can reuse it.
  *
  * Rule: a sentence ends at `.`, `!`, `?` or `…` followed by whitespace and an uppercase letter
- * (optionally after an opening quote/bracket), or at the end of the text.
+ * (optionally after an opening quote), or at the end of the text.
+ *  - An opening bracket after a dot does not start a sentence: "sp. z o.o. (Zamawiający)" and
+ *    "S.A. (Wykonawca)" are role labels inside a sentence, which is how models describe parties.
  *  - Decimals ("184.500,00", "3.5") never split, because no whitespace follows the dot.
  *  - Suffix abbreviations ("2026 r. w", "sp. z o.o. oraz", "100 zł.") are usually followed by
  *    a lowercase word, so they do not split; when followed by an uppercase word they are treated
@@ -58,8 +60,8 @@ const PREFIX_ABBREVIATIONS = new Set([
   'vs',
 ]);
 
-/** Candidate boundary: terminal punctuation, optional closing quotes/brackets, whitespace, then an uppercase letter. */
-const BOUNDARY = /([.!?…]+)["'”»)\]]*\s+(?=["'„«“([]*\p{Lu})/gu;
+/** Candidate boundary: terminal punctuation, optional closing quotes/brackets, whitespace, then an uppercase letter (optionally after an opening quote). */
+const BOUNDARY = /([.!?…]+)["'”»)\]]*\s+(?=["'„«“]*\p{Lu})/gu;
 
 /** True when the dot at the end of `textBefore` belongs to an abbreviation or an initial. */
 function endsWithNonTerminalDot(textBefore: string): boolean {

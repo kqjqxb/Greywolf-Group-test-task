@@ -33,6 +33,15 @@ describe('countSentences', () => {
     ).toBe(2);
   });
 
+  it('does not split before a bracketed role label after "o.o." or "S.A."', () => {
+    // Real Claude summary of the test PDF: 4 sentences, previously counted as 6.
+    expect(
+      countSentences(
+        'Umowa zawarta między Nordwave Logistics sp. z o.o. (Zamawiający) a Kwadrat Software S.A. (Wykonawca) dotyczy CRM. Wdrożenie ma pięć etapów. Abonament wynosi 12 300,00 zł. Kary są limitowane.',
+      ),
+    ).toBe(4);
+  });
+
   it('treats "S.A." followed by an uppercase word as the end of a sentence', () => {
     expect(countSentences('Wykonawcą jest Kwadrat Software S.A. Umowa dotyczy CRM.')).toBe(2);
   });
