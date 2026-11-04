@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { MAX_DOCUMENT_CHARS } from '../../../src/lib/limits';
 import { AnalyzeResponseSchema } from '../../../src/lib/schema';
 import { PROMPT_VERSION } from '../ai/prompt';
 import { budgetKey } from '../budget';
@@ -26,13 +27,19 @@ function makeEnv(kv: FakeKv, overrides: Partial<Env> = {}): Env {
   };
 }
 
-function analyzeRequest(fileName = 'umowa.pdf'): Request {
+function analyzeRequest(fileName = 'umowa.pdf', text = TEXT): Request {
   return new Request('https://api.test/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileName, pages: 12, text: TEXT }),
+    body: JSON.stringify({ fileName, pages: 12, text }),
   });
 }
+
+/** 4 pages of ~49k characters → 2 chunks (over the chunking threshold, under the size limit). */
+const LONG_TEXT = Array.from(
+  { length: 4 },
+  (_, i) => `--- Strona ${i + 1} ---\n${'x'.repeat(49_000)}`,
+).join('\n\n');
 
 function claudeMessage(text: string): Response {
   return new Response(
@@ -162,6 +169,56 @@ describe('POST /analyze — chain, budget and cache', () => {
 
     expect(geminiFetch).toHaveBeenCalledTimes(1);
     expect(body.meta?.model).toBe('gemini-primary');
+  });
+});
+
+describe('POST /analyze — size and cost limits', () => {
+  it('rejects a document over the length limit before any AI call', async () => {
+    const kv = new FakeKv();
+    const { claudeFetch, geminiFetch, deps } = mocks([]);
+
+    const response = await handleAnalyze(
+      analyzeRequest('dlugi.pdf', 'a'.repeat(MAX_DOCUMENT_CHARS + 1)),
+      makeEnv(kv),
+      deps,
+    );
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ error: 'payload_too_large' });
+    expect(claudeFetch).not.toHaveBeenCalled();
+    expect(geminiFetch).not.toHaveBeenCalled();
+    expect(kv.data.size).toBe(0);
+  });
+
+  it('runs a chunked request entirely on Gemini when its Claude calls do not fit the budget', async () => {
+    const kv = new FakeKv();
+    // 2 chunks + summary = up to 6 Claude calls; 145 + 6 > 150.
+    kv.data.set(budgetKey(NOW), '145');
+    const summary = '{"summary": "Całość jest umową. Strony są dwie. Wartość jest znana."}';
+    const { claudeFetch, geminiFetch, deps } = mocks(
+      [],
+      [geminiAnswer(validModelAnswer()), geminiAnswer(validModelAnswer()), geminiAnswer(summary)],
+    );
+
+    const response = await handleAnalyze(analyzeRequest('dlugi.pdf', LONG_TEXT), makeEnv(kv), deps);
+
+    expect(response.status).toBe(200);
+    const body = await readBody(response);
+    expect(body.meta).toMatchObject({ model: 'gemini-primary', chunks: 2 });
+    expect(claudeFetch).not.toHaveBeenCalled();
+    expect(geminiFetch).toHaveBeenCalledTimes(3);
+    expect(kv.data.get(budgetKey(NOW))).toBe('145');
+  });
+
+  it('still uses Claude for a single-call document when its 2 calls fit the budget', async () => {
+    const kv = new FakeKv();
+    kv.data.set(budgetKey(NOW), '148');
+    const { claudeFetch, deps } = mocks([claudeMessage(validModelAnswer())]);
+
+    const body = await readBody(await handleAnalyze(analyzeRequest(), makeEnv(kv), deps));
+
+    expect(body.meta?.model).toBe('claude-haiku-5-5');
+    expect(claudeFetch).toHaveBeenCalledTimes(1);
   });
 });
 

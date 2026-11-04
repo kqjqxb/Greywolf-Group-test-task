@@ -1,6 +1,6 @@
 /**
  * Presentation-only formatting for the redesigned result and history cards (Polish locale).
- * The shared, tested formatters stay in src/lib/format.ts; these only split or shorten them.
+ * The general formatters are in format.ts; these only split or shorten values for the cards.
  */
 
 const LOCALE = 'pl-PL';

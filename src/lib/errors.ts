@@ -1,4 +1,4 @@
-import { MAX_FILE_SIZE_BYTES, MAX_REQUEST_BODY_BYTES } from './limits';
+import { MAX_DOCUMENT_CHARS, MAX_FILE_SIZE_BYTES } from './limits';
 import type { ApiErrorCode } from './schema';
 
 /** Errors detected in the browser (file checks, PDF reading, network). */
@@ -39,6 +39,8 @@ export function toErrorCode(error: unknown): AppErrorCode {
 
 const MB = 1024 * 1024;
 const CONFIG_ERROR = 'Usługa analizy jest nieprawidłowo skonfigurowana. Spróbuj ponownie później.';
+/** Same message for the browser check and the worker's 413: both mean the document is too long. */
+const TOO_LONG = `Dokument jest zbyt długi do analizy (maks. ok. ${MAX_DOCUMENT_CHARS / 1000} tys. znaków).`;
 const BAD_REQUEST =
   'Serwer odrzucił żądanie jako nieprawidłowe. Spróbuj ponownie lub wybierz inny plik.';
 
@@ -54,7 +56,7 @@ const MESSAGES: Record<AppErrorCode, string> = {
   pdf_corrupted: 'Nie udało się odczytać pliku PDF. Plik może być uszkodzony.',
   pdf_no_text:
     'Ten PDF nie zawiera warstwy tekstowej, a automatyczne rozpoznawanie tekstu (OCR) nie odczytało z niego treści. Spróbuj z wyraźniejszym skanem lub plikiem z tekstem.',
-  text_too_large: `Tekst dokumentu jest za długi do analizy (limit ${MAX_REQUEST_BODY_BYTES / MB} MB tekstu).`,
+  text_too_large: TOO_LONG,
   // Client-side: network
   network: 'Brak połączenia z usługą analizy. Sprawdź połączenie z internetem i spróbuj ponownie.',
   timeout: 'Analiza trwała zbyt długo i została przerwana. Spróbuj ponownie.',
@@ -67,7 +69,7 @@ const MESSAGES: Record<AppErrorCode, string> = {
   unsupported_media_type: BAD_REQUEST,
   invalid_json: BAD_REQUEST,
   invalid_body: BAD_REQUEST,
-  payload_too_large: `Tekst dokumentu jest za długi do analizy (limit ${MAX_REQUEST_BODY_BYTES / MB} MB tekstu).`,
+  payload_too_large: TOO_LONG,
   rate_limited: 'Wysłano zbyt wiele żądań. Odczekaj chwilę i spróbuj ponownie.',
   ai_unavailable: 'Usługa AI jest chwilowo niedostępna. Spróbuj ponownie za chwilę.',
   ai_invalid_response:

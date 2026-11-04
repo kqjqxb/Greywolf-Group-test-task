@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { sampleResult } from '../../../src/lib/fixtures/sample-result';
 import type { AnalysisResult } from '../../../src/lib/schema';
+import { MAX_DOCUMENT_CHARS } from '../../../src/lib/limits';
 import {
+  CHUNK_MAX_CHARS,
   CHUNKING_THRESHOLD_CHARS,
+  isTooLong,
+  MAX_CHUNKS,
   MAX_KEY_POINTS,
   mergeChunkResults,
   needsChunking,
+  planChunks,
   splitIntoChunks,
 } from './chunking';
 
@@ -22,6 +27,31 @@ describe('needsChunking', () => {
     expect(needsChunking(pages(12, 9_000))).toBe(false);
     expect(needsChunking('a'.repeat(CHUNKING_THRESHOLD_CHARS))).toBe(false);
     expect(needsChunking('a'.repeat(CHUNKING_THRESHOLD_CHARS + 1))).toBe(true);
+  });
+});
+
+describe('planChunks and isTooLong', () => {
+  it('keeps a short document as one text', () => {
+    const text = pages(12, 3_000);
+    expect(planChunks(text)).toEqual([text]);
+    expect(isTooLong(text, planChunks(text))).toBe(false);
+  });
+
+  it('accepts a document at the character limit in at most MAX_CHUNKS chunks', () => {
+    // 60 pages of ~5k characters = just under 300k characters.
+    const text = pages(60, 4_970);
+    expect(text.length).toBeLessThanOrEqual(MAX_DOCUMENT_CHARS);
+    const chunks = planChunks(text);
+    expect(chunks.length).toBeLessThanOrEqual(MAX_CHUNKS);
+    expect(isTooLong(text, chunks)).toBe(false);
+  });
+
+  it('rejects text over the character limit or needing more than MAX_CHUNKS chunks', () => {
+    const tooManyChars = 'a'.repeat(MAX_DOCUMENT_CHARS + 1);
+    expect(isTooLong(tooManyChars, planChunks(tooManyChars))).toBe(true);
+    // Under the character limit, but packed into 4 chunks.
+    const fourChunks = ['a', 'b', 'c', 'd'].map((letter) => letter.repeat(CHUNK_MAX_CHARS / 2));
+    expect(isTooLong(fourChunks.join(''), fourChunks)).toBe(true);
   });
 });
 
@@ -92,7 +122,7 @@ describe('mergeChunkResults', () => {
       keywords: ['sla', 'hosting'],
     });
 
-    const merged = mergeChunkResults([first, second]);
+    const merged = mergeChunkResults([first, second], 'Podsumowanie całości.');
 
     expect(merged.document.title).toBe('Umowa nr 14');
     expect(merged.document.date).toBe('2026-03-12');
@@ -109,7 +139,7 @@ describe('mergeChunkResults', () => {
     expect(merged.keyPoints).toEqual(['A1', 'B1', 'A2', 'A3', 'B3', 'A4', 'B4']);
     expect(merged.keyPoints).toHaveLength(MAX_KEY_POINTS);
     expect(merged.keywords).toEqual(['wdrożenie', 'SLA', 'hosting']);
-    expect(merged.summary).toBe(first.summary);
+    expect(merged.summary).toBe('Podsumowanie całości.');
   });
 
   it('picks language and type by majority, ties going to the earlier chunk', () => {
@@ -118,10 +148,13 @@ describe('mergeChunkResults', () => {
       document: { ...sampleResult.document, language: 'en', type: 'inne' },
     });
 
-    expect(mergeChunkResults([en, pl, pl]).document).toMatchObject({
+    expect(mergeChunkResults([en, pl, pl], 'x').document).toMatchObject({
       language: 'pl',
       type: 'umowa',
     });
-    expect(mergeChunkResults([en, pl]).document).toMatchObject({ language: 'en', type: 'inne' });
+    expect(mergeChunkResults([en, pl], 'x').document).toMatchObject({
+      language: 'en',
+      type: 'inne',
+    });
   });
 });

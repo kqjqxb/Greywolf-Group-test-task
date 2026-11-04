@@ -1,7 +1,8 @@
 import { MAX_REQUEST_BODY_BYTES } from '../../../src/lib/limits';
 import { AnalyzeRequestSchema, type AnalyzeResponse } from '../../../src/lib/schema';
-import { analyzeDocument } from '../ai/analyze';
+import { analyzeDocument, maxClaudeCalls } from '../ai/analyze';
 import type { AnalyzeError, CallStats } from '../ai/chain';
+import { isTooLong, planChunks } from '../ai/chunking';
 import { createClaudeProvider } from '../ai/claude';
 import { createGeminiProvider } from '../ai/gemini';
 import { PROMPT_VERSION } from '../ai/prompt';
@@ -107,6 +108,12 @@ export async function handleAnalyze(
   const analyzeRequest = parsed.data;
   const store = env.PDF_INSIGHT_KV;
 
+  // Size: more text than MAX_CHUNKS chunks is rejected before any AI call (cost guard).
+  const chunks = planChunks(analyzeRequest.text);
+  if (isTooLong(analyzeRequest.text, chunks)) {
+    return errorResponse('payload_too_large', 413);
+  }
+
   // 1. Cache: the same text was already analyzed with this prompt version → no AI call at all.
   const key = await cacheKey(analyzeRequest.text);
   const cached = await readCachedResult(store, key);
@@ -132,8 +139,14 @@ export async function handleAnalyze(
     return json(cachedBody);
   }
 
-  // 2. Budget: over today's limit → Claude is skipped and the chain starts with Gemini.
-  const useClaude = await hasClaudeBudget(store, parseDailyLimit(env.CLAUDE_DAILY_LIMIT), now());
+  // 2. Budget: when this request's worst-case Claude calls do not fit into today's limit,
+  //    Claude is skipped for the whole request and the chain starts with Gemini.
+  const useClaude = await hasClaudeBudget(
+    store,
+    parseDailyLimit(env.CLAUDE_DAILY_LIMIT),
+    maxClaudeCalls(chunks.length),
+    now(),
+  );
   const outcome = await analyzeDocument(analyzeRequest, {
     providers: buildProviders(env, useClaude, deps),
     ...(deps.now ? { now: deps.now } : {}),

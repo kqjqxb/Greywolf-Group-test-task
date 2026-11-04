@@ -9,7 +9,7 @@ import {
 } from '../lib/format';
 import type { CompletedAnalysis } from '../lib/analysisState';
 import type { AnalyzeMeta } from '../lib/schema';
-import { formatAmountValue, initials, keepLegalSuffixTogether } from './displayFormat';
+import { formatAmountValue, initials, keepLegalSuffixTogether } from '../lib/displayFormat';
 import { ExtractionNotices } from './ExtractionNotices';
 import {
   BuildingIcon,

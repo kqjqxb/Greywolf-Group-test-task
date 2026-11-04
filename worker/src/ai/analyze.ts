@@ -7,6 +7,7 @@ import {
 import { countSentences } from '../../../src/lib/sentences';
 import {
   emptyStats,
+  MAX_ATTEMPTS_PER_PROVIDER,
   MIN_CALL_BUDGET_MS,
   REQUEST_BUDGET_MS,
   runChain,
@@ -15,7 +16,7 @@ import {
   type Remaining,
   type Validation,
 } from './chain';
-import { mergeChunkResults, needsChunking, splitIntoChunks } from './chunking';
+import { MAX_KEYWORDS, mergeChunkResults, planChunks } from './chunking';
 import { dedupeAmounts, dedupeStrings, mergeDates } from './dedupe';
 import { SummaryOutputSchema } from './outputSchema';
 import {
@@ -73,7 +74,9 @@ function summaryProblem(summary: string): string | null {
 
 /**
  * Deterministic clean-up after validation, so the rules hold for every provider:
- * one entry per date (contexts merged), no duplicate amounts, names or keywords.
+ * one entry per date (contexts merged), no duplicate amounts, names or keywords, and at most
+ * MAX_KEYWORDS keywords. The prompt asks for 3–10 keywords; a longer list is trimmed here instead
+ * of being rejected by the schema, because failing a whole analysis over extra keywords helps nobody.
  */
 function cleanUp(result: AnalysisResult): AnalysisResult {
   return {
@@ -84,7 +87,7 @@ function cleanUp(result: AnalysisResult): AnalysisResult {
     },
     amounts: dedupeAmounts(result.amounts),
     dates: mergeDates(result.dates),
-    keywords: dedupeStrings(result.keywords),
+    keywords: dedupeStrings(result.keywords).slice(0, MAX_KEYWORDS),
   };
 }
 
@@ -146,6 +149,17 @@ function describeModels(models: readonly string[]): string {
   return [...new Set(models)].join(' + ');
 }
 
+/**
+ * Most Claude calls a document can cost: every task (one per chunk, plus the final summary call
+ * when there is more than one chunk) may use the first call and one retry on Claude. Upstream
+ * failures move on to Gemini, so they never add Claude calls. Used to check the daily budget
+ * before the request starts.
+ */
+export function maxClaudeCalls(chunkCount: number): number {
+  const tasks = chunkCount > 1 ? chunkCount + 1 : 1;
+  return tasks * MAX_ATTEMPTS_PER_PROVIDER;
+}
+
 /** Documents up to the chunking threshold: one call on the chain. */
 async function analyzeWhole(
   request: AnalyzeRequest,
@@ -173,16 +187,17 @@ async function analyzeWhole(
 /**
  * F-08: chunks are analyzed in parallel (each on the chain, within the same deadline), merged
  * deterministically, and the summary is rewritten from the chunk summaries by one short call.
- * Any failed chunk fails the request — a result silently missing part of the document would mislead.
- * When the summary call fails or there is no time left, the first chunk's (valid) summary stays.
+ * Any failed call fails the request — a result silently missing part of the document would mislead.
+ * That includes the summary call: a chunk's summary describes only part of the document, so it is
+ * not used as a fallback. No time left for the summary call → `ai_timeout`.
  */
 async function analyzeInChunks(
   request: AnalyzeRequest,
+  chunks: readonly string[],
   providers: readonly ModelProvider[],
   remaining: Remaining,
   stats: CallStats,
 ) {
-  const chunks = splitIntoChunks(request.text);
   const outcomes = await Promise.all(
     chunks.map((chunk, index) =>
       runChain(
@@ -210,28 +225,28 @@ async function analyzeInChunks(
     models.push(outcome.model);
   }
 
-  const merged = mergeChunkResults(results);
-  if (remaining() >= MIN_SUMMARY_BUDGET_MS) {
-    const summary = await runChain(
-      providers,
-      {
-        systemInstruction: SUMMARY_SYSTEM_INSTRUCTION,
-        userPrompt: buildSummaryUserPrompt(results.map((result) => result.summary)),
-        output: 'summary',
-        validate: validateSummaryOutput,
-        minCallBudgetMs: MIN_SUMMARY_BUDGET_MS,
-      },
-      remaining,
-      stats,
-    );
-    if (summary.ok) {
-      merged.summary = summary.value;
-      models.push(summary.model);
-    }
+  if (remaining() < MIN_SUMMARY_BUDGET_MS) {
+    return { ok: false as const, error: 'ai_timeout' as const };
   }
+  const summary = await runChain(
+    providers,
+    {
+      systemInstruction: SUMMARY_SYSTEM_INSTRUCTION,
+      userPrompt: buildSummaryUserPrompt(results.map((result) => result.summary)),
+      output: 'summary',
+      validate: validateSummaryOutput,
+      minCallBudgetMs: MIN_SUMMARY_BUDGET_MS,
+    },
+    remaining,
+    stats,
+  );
+  if (!summary.ok) {
+    return summary;
+  }
+  models.push(summary.model);
   return {
     ok: true as const,
-    result: merged,
+    result: mergeChunkResults(results, summary.value),
     model: describeModels(models),
     chunks: chunks.length,
   };
@@ -250,9 +265,11 @@ export async function analyzeDocument(
   const remaining: Remaining = () => REQUEST_BUDGET_MS - (now() - startedAt);
   const stats = emptyStats();
 
-  const outcome = needsChunking(request.text)
-    ? await analyzeInChunks(request, options.providers, remaining, stats)
-    : await analyzeWhole(request, options.providers, remaining, stats);
+  const chunks = planChunks(request.text);
+  const outcome =
+    chunks.length > 1
+      ? await analyzeInChunks(request, chunks, options.providers, remaining, stats)
+      : await analyzeWhole(request, options.providers, remaining, stats);
 
   if (!outcome.ok) {
     return { ok: false, error: outcome.error, stats };

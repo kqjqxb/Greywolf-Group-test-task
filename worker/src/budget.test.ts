@@ -19,16 +19,26 @@ describe('Claude daily budget', () => {
 
   it('allows Claude below the limit and blocks it at the limit', async () => {
     const kv = new FakeKv();
-    expect(await hasClaudeBudget(kv, 3, NOV_4_NOON)).toBe(true);
+    expect(await hasClaudeBudget(kv, 3, 1, NOV_4_NOON)).toBe(true);
 
     await recordClaudeCalls(kv, 2, NOV_4_NOON);
-    expect(await hasClaudeBudget(kv, 3, NOV_4_NOON)).toBe(true);
+    expect(await hasClaudeBudget(kv, 3, 1, NOV_4_NOON)).toBe(true);
 
     await recordClaudeCalls(kv, 1, NOV_4_NOON);
     expect(kv.data.get('claude-calls:2026-11-04')).toBe('3');
-    expect(await hasClaudeBudget(kv, 3, NOV_4_NOON)).toBe(false);
+    expect(await hasClaudeBudget(kv, 3, 1, NOV_4_NOON)).toBe(false);
     // A new UTC day starts from zero.
-    expect(await hasClaudeBudget(kv, 3, NOV_5_EARLY)).toBe(true);
+    expect(await hasClaudeBudget(kv, 3, 1, NOV_5_EARLY)).toBe(true);
+  });
+
+  it('requires room for all planned calls of the request', async () => {
+    const kv = new FakeKv();
+    await recordClaudeCalls(kv, 142, NOV_4_NOON);
+    // 142 + 8 (a 3-chunk document) = 150 fits; 143 + 8 does not.
+    expect(await hasClaudeBudget(kv, 150, 8, NOV_4_NOON)).toBe(true);
+    await recordClaudeCalls(kv, 1, NOV_4_NOON);
+    expect(await hasClaudeBudget(kv, 150, 8, NOV_4_NOON)).toBe(false);
+    expect(await hasClaudeBudget(kv, 150, 2, NOV_4_NOON)).toBe(true);
   });
 
   it('writes counters with a TTL and skips the write when there were no calls', async () => {
@@ -43,7 +53,7 @@ describe('Claude daily budget', () => {
   it('skips Claude when KV cannot be read, and never throws on a failed write', async () => {
     const kv = new FakeKv();
     kv.failing = true;
-    expect(await hasClaudeBudget(kv, 100, NOV_4_NOON)).toBe(false);
+    expect(await hasClaudeBudget(kv, 100, 1, NOV_4_NOON)).toBe(false);
     await expect(recordClaudeCalls(kv, 1, NOV_4_NOON)).resolves.toBeUndefined();
   });
 

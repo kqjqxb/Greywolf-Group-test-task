@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { sampleResult } from './fixtures/sample-result';
 import { sampleResultLong } from './fixtures/sample-result-long';
-import { AnalysisResultSchema, AnalyzeRequestSchema, type AnalysisResult } from './schema';
+import {
+  AnalysisResultSchema,
+  AnalyzeRequestSchema,
+  knownCurrencies,
+  type AnalysisResult,
+} from './schema';
 
 /** Deep copy of the valid fixture, so each test can break one thing. */
 function copySample(): AnalysisResult {
@@ -56,6 +61,29 @@ describe('AnalysisResultSchema', () => {
     expect(isValid({ ...inDates, dates: [{ date: '2026-02-30', context: 'zawarcie' }] })).toBe(
       false,
     );
+  });
+
+  it('rejects a well-formed code that is not a real ISO 4217 currency', () => {
+    for (const currency of ['ZZZ', 'ABC', 'PLZ']) {
+      const result = { ...sampleResult, amounts: [{ value: 1, currency, context: 'x' }] };
+      expect(isValid(result)).toBe(false);
+    }
+    for (const currency of ['PLN', 'EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CNY']) {
+      const result = { ...sampleResult, amounts: [{ value: 1, currency, context: 'x' }] };
+      expect(isValid(result)).toBe(true);
+    }
+  });
+
+  it('falls back to the shape check when Intl has no currency list', () => {
+    const noList = {} as Pick<typeof Intl, 'supportedValuesOf'>;
+    expect(knownCurrencies(noList)).toBeNull();
+    const throwing: Pick<typeof Intl, 'supportedValuesOf'> = {
+      supportedValuesOf: () => {
+        throw new RangeError('unsupported');
+      },
+    };
+    expect(knownCurrencies(throwing)).toBeNull();
+    expect(knownCurrencies()?.has('PLN')).toBe(true);
   });
 
   it('rejects a currency that is not an uppercase 3-letter ISO 4217 code', () => {

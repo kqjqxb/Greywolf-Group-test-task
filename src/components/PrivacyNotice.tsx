@@ -2,7 +2,7 @@ import { ShieldIcon } from './icons';
 
 /**
  * Required by the brief: the user must know the document goes to an external AI API.
- * A compact row under the drop zone (owner's bug #5: it used to weigh as much as the upload).
+ * A compact row under the drop zone, so it does not compete visually with the upload itself.
  */
 export function PrivacyNotice() {
   return (

@@ -71,4 +71,55 @@ describe('countSentences', () => {
       2,
     );
   });
+
+  describe('scripts without letter case', () => {
+    it('counts Chinese sentences ending with 。！？ without spaces', () => {
+      expect(
+        countSentences(
+          '本合同由两家公司签订。合同金额为十万元！付款期限是多久？合同有效期为两年。',
+        ),
+      ).toBe(4);
+    });
+
+    it('counts Japanese sentences, also after a closing quote', () => {
+      expect(
+        countSentences(
+          '本契約は二社間で締結された。契約金額は百万円である。「納期は三月末とする。」支払いは翌月末までに行う。',
+        ),
+      ).toBe(4);
+    });
+
+    it('counts Arabic sentences ending with . and ؟', () => {
+      expect(
+        countSentences(
+          'هذا العقد بين شركتين. قيمة العقد مئة ألف دولار. ما هي مدة العقد؟ مدة العقد سنتان. يبدأ العمل في أبريل.',
+        ),
+      ).toBe(5);
+    });
+
+    it('counts Hebrew sentences', () => {
+      expect(
+        countSentences('החוזה נחתם בין שתי חברות. ערך החוזה הוא מאה אלף שקלים. החוזה תקף לשנתיים.'),
+      ).toBe(3);
+    });
+
+    it('counts Hindi sentences ending with the danda', () => {
+      expect(
+        countSentences(
+          'यह अनुबंध दो कंपनियों के बीच है। अनुबंध की राशि एक लाख रुपये है। अवधि दो साल है।',
+        ),
+      ).toBe(3);
+    });
+
+    it('does not count a final terminator as an extra boundary', () => {
+      expect(countSentences('合同金额为十万元。')).toBe(1);
+      expect(countSentences('合同金额为十万元。 ')).toBe(1);
+    });
+
+    it('does not change Latin rules: a lowercase word after a dot still does not split', () => {
+      expect(countSentences('Umowę zawarto 12.03.2026 r. w Gdańsku. Obowiązuje 24 miesiące.')).toBe(
+        2,
+      );
+    });
+  });
 });

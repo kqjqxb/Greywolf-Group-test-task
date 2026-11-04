@@ -32,16 +32,19 @@ async function readCount(store: KeyValueStore, key: string): Promise<number> {
 }
 
 /**
- * True when today's Claude calls are below the limit. If KV cannot be read we return false:
+ * True when today's Claude calls plus the calls this request may make (`plannedCalls`, its worst
+ * case) stay within the limit. A request that does not fit runs entirely on Gemini, so one long
+ * document cannot push the day far over the limit. If KV cannot be read we return false:
  * protecting the prepaid credit is more important than using the better model.
  */
 export async function hasClaudeBudget(
   store: KeyValueStore,
   limit: number,
+  plannedCalls: number,
   nowMs: number,
 ): Promise<boolean> {
   try {
-    return (await readCount(store, budgetKey(nowMs))) < limit;
+    return (await readCount(store, budgetKey(nowMs))) + plannedCalls <= limit;
   } catch {
     return false;
   }

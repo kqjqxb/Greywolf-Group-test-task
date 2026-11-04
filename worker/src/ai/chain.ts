@@ -21,6 +21,9 @@ export const CALL_TIMEOUT_CAP_MS = 20_000;
  */
 export const MIN_CALL_BUDGET_MS = 8_000;
 
+/** First call + exactly one retry after an invalid answer (the brief's retry rule). */
+export const MAX_ATTEMPTS_PER_PROVIDER = 2;
+
 export type AnalyzeError = 'rate_limited' | 'ai_timeout' | 'ai_unavailable' | 'ai_invalid_response';
 
 const PROVIDER_ERRORS: Record<ProviderError, AnalyzeError> = {
@@ -76,9 +79,7 @@ async function runWithProvider<T>(
   stats: CallStats,
 ): Promise<ProviderOutcome<T>> {
   const messages: ChatMessage[] = [{ role: 'user', text: task.userPrompt }];
-  const maxAttempts = 2;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_PROVIDER; attempt += 1) {
     if (provider.paid) {
       stats.paidCalls += 1;
     }
