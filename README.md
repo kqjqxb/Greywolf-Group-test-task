@@ -86,7 +86,7 @@ flowchart LR
 - Użytkownik widzi informację, że tekst trafia do zewnętrznego API AI (Anthropic, awaryjnie Google), a wyniki są przechowywane w cache do 14 dni.
 
 ## Jakość wyników AI: ewaluacja
-`npm run eval -- <ścieżka.pdf> [--url <worker>]` wyciąga tekst tak jak frontend, woła worker i sprawdza 17 faktów (typ, język, data, strony, kwoty w 3 walutach, strony umowy, osoby, daty ISO bez duplikatów, 3–5 zdań, brak efektów *prompt injection*).
+`npm run eval -- <ścieżka.pdf> [--url <worker>]` wyciąga tekst tak jak frontend, woła worker i sprawdza fakty z oczekiwań (typ, język, data, strony, kwoty w 3 walutach, strony umowy, osoby, daty ISO bez duplikatów, 3–5 zdań, brak efektów *prompt injection*); przyjmuje PDF albo fikstury `.txt`.
 
 Dwa zestawy kontroli: polska umowa testowa (**18/18**) i fikcyjne angielskie CV w `eval/fixtures/` (**17/17**: język wartości, daty `YYYY-MM`, wspólne daty, brak produktów wśród organizacji), `claude-haiku-5-5`, prompt 1.2.0. Historia zmian promptu jest w [AI_LOG.md](AI_LOG.md).
 
