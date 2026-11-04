@@ -1,4 +1,5 @@
 import { sampleResult } from '../lib/fixtures/sample-result';
+import { sampleResultLong } from '../lib/fixtures/sample-result-long';
 import { AnalyzeRequestSchema } from '../lib/schema';
 
 /**
@@ -6,7 +7,8 @@ import { AnalyzeRequestSchema } from '../lib/schema';
  * (never included in production builds, see client.ts). Returns a real `Response`, so the
  * client's validation runs exactly as with the worker.
  * A file name containing "blad" returns `ai_unavailable`, to try the error state;
- * one containing "cache" is answered as a cached result.
+ * one containing "cache" is answered as a cached result; one containing "umowa_14" returns the
+ * long fixture (many amounts, dates and people) to check the dashboard layout.
  */
 const MOCK_DELAY_MS = 1500;
 
@@ -27,11 +29,13 @@ export function mockFetch(body: string, signal: AbortSignal): Promise<Response> 
         resolve(json({ error: 'ai_unavailable' }, 503));
       } else {
         const { fileName, pages } = request.data;
-        const cached = fileName.toLowerCase().includes('cache');
+        const lowerName = fileName.toLowerCase();
+        const cached = lowerName.includes('cache');
+        const sample = lowerName.includes('umowa_14') ? sampleResultLong : sampleResult;
         resolve(
           json(
             {
-              result: { ...sampleResult, document: { ...sampleResult.document, fileName, pages } },
+              result: { ...sample, document: { ...sample.document, fileName, pages } },
               meta: {
                 model: 'mock-model',
                 promptVersion: 'mock',

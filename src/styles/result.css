@@ -26,14 +26,39 @@
   gap: 1rem;
 }
 
+/*
+ * Desktop: a 12-column grid. Cards take half a row by default; long lists (amounts, entities)
+ * get a full row. Cards in one row stretch to the same height, so paired rows look even.
+ * Rows in reading order: document | summary → key points | dates → entities → amounts → …
+ */
 @media (min-width: 900px) {
   .dashboard {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
   }
 
-  .dashboard__wide {
+  .dashboard > * {
+    grid-column: span 6;
+  }
+
+  .dashboard > .dashboard__wide,
+  .dashboard > .dashboard__doc,
+  .dashboard > .dashboard__summary {
     grid-column: 1 / -1;
+  }
+}
+
+/* Wide screens: the summary sits beside the document card as the lead (1/3 + 2/3). */
+@media (min-width: 1024px) {
+  .dashboard > .dashboard__doc {
+    grid-column: span 4;
+  }
+
+  .dashboard > .dashboard__summary {
+    grid-column: span 8;
+  }
+
+  .dashboard__doc .doc-card__title {
+    font-size: 1.5rem;
   }
 }
 
@@ -51,6 +76,11 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
+}
+
+/* When the card is stretched next to the summary, keep the meta chips at the bottom. */
+.dashboard__doc .meta-chips {
+  margin-top: auto;
 }
 
 .doc-card__file {
@@ -95,6 +125,7 @@
 /* ---------- Summary ---------- */
 
 .summary {
+  max-width: 80ch;
   font-size: 1.125rem;
   line-height: 1.65;
 }
@@ -137,15 +168,18 @@
   stroke-width: 2.5;
 }
 
-/* Entities: two lists side by side when there is room. */
+/*
+ * Entities: below 900px organizations sit above people; on desktop organizations get a column
+ * as wide as their longest name (up to half the card), people flow into the columns beside it.
+ */
 .entities {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem 2rem;
 }
 
-@media (min-width: 480px) {
+@media (min-width: 900px) {
   .entities {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: fit-content(50%) minmax(0, 1fr);
   }
 }
 
@@ -174,6 +208,12 @@
   overflow-wrap: anywhere;
 }
 
+.entity-list--people {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.5rem 1rem;
+}
+
 .avatar {
   display: grid;
   place-items: center;
@@ -196,7 +236,8 @@
 
 .amounts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  /* About 4 columns on desktop, 2 on tablet, 1 on a phone. */
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
   gap: 0.75rem;
   padding: 0;
   list-style: none;
@@ -234,6 +275,8 @@
 /* ---------- Dates timeline ---------- */
 
 .timeline {
+  /* The timeline's own width decides the layout (it is narrower in a half-row card). */
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -243,7 +286,11 @@
 .timeline li {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(7.5rem, auto) 1fr;
+  /*
+   * Fixed date column, so every context starts at the same x. 10.75rem fits the longest
+   * Polish date, "12 października 2026" (165px at 16px Manrope).
+   */
+  grid-template-columns: 10.75rem minmax(0, 1fr);
   gap: 0.25rem 1.25rem;
   padding: 0 0 1rem 1.25rem;
 }
@@ -281,6 +328,7 @@
 
 .timeline__date {
   font-weight: 700;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
@@ -289,9 +337,10 @@
   overflow-wrap: anywhere;
 }
 
-@media (max-width: 479px) {
+/* Too narrow for two readable columns (phones, half-row card at ~900px): date above context. */
+@container (max-width: 26rem) {
   .timeline li {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

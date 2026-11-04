@@ -9,7 +9,7 @@ import {
 } from '../lib/format';
 import type { CompletedAnalysis } from '../lib/analysisState';
 import type { AnalyzeMeta } from '../lib/schema';
-import { formatAmountValue, initials } from './displayFormat';
+import { formatAmountValue, initials, keepLegalSuffixTogether } from './displayFormat';
 import { ExtractionNotices } from './ExtractionNotices';
 import {
   BuildingIcon,
@@ -34,13 +34,16 @@ interface CardProps {
   title: string;
   icon: ReactNode;
   wide?: boolean;
+  /** Extra layout class, e.g. `dashboard__summary`. */
+  className?: string;
   children: ReactNode;
 }
 
-/** One dashboard card; `wide` spans both columns on large screens. */
-function Card({ title, icon, wide = false, children }: CardProps) {
+/** One dashboard card; `wide` spans the full row on large screens. */
+function Card({ title, icon, wide = false, className, children }: CardProps) {
+  const classes = ['card', wide ? 'dashboard__wide' : '', className ?? ''].filter(Boolean);
   return (
-    <section className={`card${wide ? ' dashboard__wide' : ''}`}>
+    <section className={classes.join(' ')}>
       <h3 className="card__title">
         {icon}
         {title}
@@ -92,7 +95,7 @@ export function ResultView({ analysis, onNewFile }: ResultViewProps) {
       <div className="dashboard reveal">
         <ExtractionNotices findings={findings} />
 
-        <section className="card dashboard__wide" aria-labelledby="doc-title">
+        <section className="card dashboard__doc" aria-labelledby="doc-title">
           <div className="doc-card__top">
             <span className="badge">{formatDocumentType(doc.type)}</span>
             <span className="doc-card__file">
@@ -122,7 +125,7 @@ export function ResultView({ analysis, onNewFile }: ResultViewProps) {
           </dl>
         </section>
 
-        <Card title="Podsumowanie" icon={<FileTextIcon />} wide>
+        <Card title="Podsumowanie" icon={<FileTextIcon />} className="dashboard__summary">
           <p className="summary">{result.summary}</p>
         </Card>
 
@@ -143,63 +146,6 @@ export function ResultView({ analysis, onNewFile }: ResultViewProps) {
           )}
         </Card>
 
-        <Card title="Podmioty" icon={<UsersIcon />}>
-          <div className="entities">
-            <div>
-              <h4 className="entities__title">Organizacje</h4>
-              {entities.organizations.length === 0 ? (
-                NO_DATA
-              ) : (
-                <ul className="entity-list">
-                  {entities.organizations.map((name, index) => (
-                    <li key={index}>
-                      <span className="avatar" aria-hidden="true">
-                        <BuildingIcon />
-                      </span>
-                      {name}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <h4 className="entities__title">Osoby</h4>
-              {entities.people.length === 0 ? (
-                NO_DATA
-              ) : (
-                <ul className="entity-list">
-                  {entities.people.map((name, index) => (
-                    <li key={index}>
-                      <span className="avatar" aria-hidden="true">
-                        {initials(name)}
-                      </span>
-                      {name}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </Card>
-
-        <Card title="Kwoty" icon={<CoinsIcon />}>
-          {result.amounts.length === 0 ? (
-            NO_DATA
-          ) : (
-            <ul className="amounts">
-              {result.amounts.map((amount, index) => (
-                <li key={index} className="amount">
-                  <span className="amount__value">
-                    {formatAmountValue(amount.value)}
-                    <span className="badge">{amount.currency}</span>
-                  </span>
-                  <span className="amount__context">{amount.context}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
         <Card title="Daty" icon={<CalendarIcon />}>
           {result.dates.length === 0 ? (
             NO_DATA
@@ -214,6 +160,63 @@ export function ResultView({ analysis, onNewFile }: ResultViewProps) {
                 </li>
               ))}
             </ol>
+          )}
+        </Card>
+
+        <Card title="Podmioty" icon={<UsersIcon />} wide>
+          <div className="entities">
+            <div>
+              <h4 className="entities__title">Organizacje</h4>
+              {entities.organizations.length === 0 ? (
+                NO_DATA
+              ) : (
+                <ul className="entity-list">
+                  {entities.organizations.map((name, index) => (
+                    <li key={index}>
+                      <span className="avatar" aria-hidden="true">
+                        <BuildingIcon />
+                      </span>
+                      {keepLegalSuffixTogether(name)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div>
+              <h4 className="entities__title">Osoby</h4>
+              {entities.people.length === 0 ? (
+                NO_DATA
+              ) : (
+                <ul className="entity-list entity-list--people">
+                  {entities.people.map((name, index) => (
+                    <li key={index}>
+                      <span className="avatar" aria-hidden="true">
+                        {initials(name)}
+                      </span>
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Kwoty" icon={<CoinsIcon />} wide>
+          {result.amounts.length === 0 ? (
+            NO_DATA
+          ) : (
+            <ul className="amounts">
+              {result.amounts.map((amount, index) => (
+                <li key={index} className="amount">
+                  <span className="amount__value">
+                    {formatAmountValue(amount.value)}
+                    <span className="badge">{amount.currency}</span>
+                  </span>
+                  <span className="amount__context">{amount.context}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </Card>
 

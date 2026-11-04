@@ -26,6 +26,27 @@ export function initials(name: string): string {
   return letters.length === 1 ? (letters[0] ?? '?') : `${letters[0] ?? ''}${letters.at(-1) ?? ''}`;
 }
 
+const NBSP = '\u00A0';
+
+/**
+ * Polish legal-form suffixes, longest first so "sp. k." does not swallow part of "S.K.A.".
+ * Whitespace inside a suffix is optional ("sp.k." and "sp. k." both match).
+ */
+const LEGAL_SUFFIX =
+  /\s+(sp\.\s*z\s*o\.\s*o\.|s\.\s*k\.\s*a\.|sp\.\s*[kjp]\.|s\.\s*[ac]\.)(?=$|[\s,;)])/giu;
+
+/**
+ * "Nordwave Logistics sp. z o.o." → the same text with no-break spaces before and inside the
+ * legal form, so a line never breaks inside "sp. z o.o." or before "S.A.". Display only:
+ * the exported JSON keeps the original string.
+ */
+export function keepLegalSuffixTogether(name: string): string {
+  return name.replace(
+    LEGAL_SUFFIX,
+    (_match, suffix: string) => NBSP + suffix.replace(/\s+/g, NBSP),
+  );
+}
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
