@@ -1,0 +1,762 @@
+/* Buttons, cards, notices and the idle screen (hero, drop zone, privacy row, steps, history). */
+
+/* ---------- Buttons ---------- */
+
+.button {
+  /* No native look: some browsers (Safari) draw form buttons grey with their own styles. */
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+}
+
+.button svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+.button--primary {
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 6px 16px -6px var(--primary);
+}
+
+.button--primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.button--secondary {
+  background: var(--surface);
+  color: var(--primary);
+}
+
+.button--secondary:hover {
+  background: var(--primary-soft);
+}
+
+.button--small {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.875rem;
+  font-size: 0.875rem;
+}
+
+/* Our buttons are never disabled today; if one is, it must look clearly different on purpose. */
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Square icon-only button (theme switch, delete). Its accessible name is an aria-label. */
+.icon-button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.icon-button:hover {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.icon-button svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.icon-button--small {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+}
+
+.icon-button--small svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.actions__status {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* Shared stroke style of the inline line icons. */
+.icon {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- Cards ---------- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+  padding: 1.25rem;
+  background: var(--surface-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+}
+
+@media (min-width: 640px) {
+  .card {
+    padding: 1.5rem;
+  }
+}
+
+.card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.card__title svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--primary);
+}
+
+/* ---------- Hero (idle) ---------- */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .hero {
+    align-items: center;
+    padding-top: 1.5rem;
+    text-align: center;
+  }
+}
+
+.hero__title {
+  max-width: 28ch;
+  text-wrap: balance;
+  font-size: var(--text-display);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+/* Gradient only on the keyword; every stop passes 3:1 on --bg (large text, contrast test). */
+.hero__keyword {
+  background: linear-gradient(90deg, var(--primary), var(--accent-lavender));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+:root[data-theme='dark'] .hero__keyword {
+  background-image: linear-gradient(
+    90deg,
+    var(--primary),
+    var(--accent-lavender),
+    var(--accent-peach)
+  );
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .hero__keyword {
+    background-image: linear-gradient(
+      90deg,
+      var(--primary),
+      var(--accent-lavender),
+      var(--accent-peach)
+    );
+  }
+}
+
+.hero__subtitle {
+  color: var(--muted);
+  font-size: 1.0625rem;
+}
+
+/* ---------- Drop zone ---------- */
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.75rem 1rem;
+  text-align: center;
+  background: var(--surface-glass);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  /* Solid border: a dashed one rendered with a gap in the rounded corner (owner's bug #2). */
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-dropzone);
+  box-shadow: var(--shadow);
+  transition:
+    border-color var(--duration-base) var(--ease),
+    box-shadow var(--duration-base) var(--ease),
+    background-color var(--duration-base) var(--ease);
+}
+
+@media (min-width: 640px) {
+  .dropzone {
+    padding: 2.5rem 2rem;
+  }
+}
+
+.dropzone--active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow:
+    0 0 0 4px var(--border),
+    0 12px 32px -8px var(--primary);
+}
+
+/* The real <input> is hidden; show its focus on the visible label. */
+.dropzone input:focus-visible + label {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.dropzone__icon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 0.25rem;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 18%, transparent),
+    color-mix(in srgb, var(--accent-lavender) 18%, transparent)
+  );
+  color: var(--primary);
+  transition: transform var(--duration-base) var(--ease);
+}
+
+.dropzone--active .dropzone__icon {
+  transform: translateY(-3px) scale(1.06);
+}
+
+.dropzone__icon svg {
+  width: 1.625rem;
+  height: 1.625rem;
+}
+
+.dropzone__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.dropzone__or {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.dropzone .button {
+  min-height: 3rem;
+  padding-inline: 1.75rem;
+}
+
+.dropzone__hint {
+  max-width: 52ch;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* ---------- Privacy row ---------- */
+
+.privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  max-width: calc(var(--measure) + 2rem);
+  margin-inline: auto;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.privacy svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.125rem;
+  color: var(--primary);
+}
+
+.privacy strong {
+  color: var(--text);
+}
+
+/* ---------- How it works (1-2-3) ---------- */
+
+.steps {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 720px) {
+  .steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.steps__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-glass);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/* Clearly visible numbers (owner's bug #3): primary on a soft tint, AA in both themes. */
+.steps__number {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--primary);
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Notices ---------- */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.notice svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.0625rem;
+}
+
+.notice--info {
+  background: var(--primary-soft);
+  color: var(--info-text);
+}
+
+.notice--info svg {
+  color: var(--primary);
+}
+
+.notice--warning {
+  background: var(--warning-soft);
+  border-color: color-mix(in srgb, var(--warning-border) 35%, transparent);
+  color: var(--warning-text);
+}
+
+.notice--warning svg {
+  color: var(--warning-border);
+}
+
+/* ---------- Error ---------- */
+
+.error-card {
+  align-items: flex-start;
+  border-color: color-mix(in srgb, var(--error) 30%, transparent);
+}
+
+.error-card__icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.error-card__icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.error-card__title {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+/* ---------- Progress ---------- */
+
+.progress {
+  gap: 1.25rem;
+}
+
+.progress__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}
+
+.progress__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.progress__time {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress__file {
+  color: var(--muted);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.stepper__step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Every step after the first starts with a connector line that fills the free space. */
+.stepper__step + .stepper__step {
+  flex: 1;
+}
+
+.stepper__step + .stepper__step::before {
+  content: '';
+  flex: 1;
+  min-width: 0.75rem;
+  height: 2px;
+  margin-right: 0.25rem;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.stepper__step--done + .stepper__step::before {
+  background: var(--primary);
+}
+
+.stepper__dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.stepper__dot svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.stepper__step--done,
+.stepper__step--active {
+  color: var(--text);
+}
+
+.stepper__step--done .stepper__dot {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.stepper__step--active .stepper__dot {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+/* Pulsing ring around the active step (transform + opacity only: cheap to animate). */
+.stepper__step--active .stepper__dot::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  opacity: 0;
+  animation: pulse 1.6s var(--ease) infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+.stepper__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Narrow screens: only the active step keeps a visible label (others stay for screen readers). */
+@media (max-width: 479px) {
+  .stepper__step:not(.stepper__step--active) .stepper__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* Skeleton of the result below the progress card. */
+.skeleton {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .skeleton {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .skeleton__card--wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.skeleton__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-glass);
+}
+
+.skeleton__line {
+  height: 0.75rem;
+  border-radius: var(--radius-pill);
+  background:
+    linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in srgb, var(--surface) 70%, transparent),
+        transparent
+      )
+      no-repeat,
+    var(--primary-soft);
+  background-size:
+    50% 100%,
+    auto;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.skeleton__line--title {
+  width: 40%;
+  height: 1rem;
+}
+
+.skeleton__line--short {
+  width: 65%;
+}
+
+@keyframes shimmer {
+  from {
+    background-position:
+      -100% 0,
+      0 0;
+  }
+
+  to {
+    background-position:
+      200% 0,
+      0 0;
+  }
+}
+
+/* ---------- History ---------- */
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.history__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.history__title {
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.history__note {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.history__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.history-card {
+  position: relative;
+  min-width: 0;
+}
+
+/* The whole card is one button that opens the saved result; delete sits on top of it. */
+.history-card__open {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  height: 100%;
+  padding: 1rem 3.5rem 1rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-glass);
+  box-shadow: var(--shadow);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+}
+
+.history-card__open:hover {
+  background: var(--surface-raised);
+  transform: translateY(-1px);
+}
+
+.history-card__name {
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.history-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.history-card__delete {
+  position: absolute;
+  top: 0.625rem;
+  right: 0.625rem;
+}
+
+/* ---------- Badges ---------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+}

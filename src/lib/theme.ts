@@ -1,52 +1,63 @@
 import type { HistoryStorage } from './history';
 
 /**
- * Light/dark theme (Stage 6). "system" follows the OS setting (`prefers-color-scheme`) purely in
- * CSS, so it needs no JavaScript and no listener. "light"/"dark" are a user override, set as
- * `data-theme` on <html> and remembered in localStorage. Colours live in src/index.css.
+ * Light/dark theme. Until the user clicks the theme button, the page follows the OS setting
+ * (`prefers-color-scheme`) purely in CSS: no `data-theme` attribute, nothing saved. A click
+ * stores an explicit "light" or "dark" in localStorage and sets `data-theme` on <html>, which
+ * overrides the media query. Colours live in src/styles/tokens.css.
  */
 
-export type ThemePreference = 'light' | 'dark' | 'system';
+export type Theme = 'light' | 'dark';
 
 export const THEME_STORAGE_KEY = 'pdf-insight:theme:v1';
 
-export const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
-  { value: 'light', label: 'Jasny' },
-  { value: 'dark', label: 'Ciemny' },
-  { value: 'system', label: 'Systemowy' },
-];
-
-function isThemePreference(value: unknown): value is ThemePreference {
-  return value === 'light' || value === 'dark' || value === 'system';
+function isTheme(value: unknown): value is Theme {
+  return value === 'light' || value === 'dark';
 }
 
-/** The saved choice; "system" when nothing (or something unexpected) is saved. */
-export function loadThemePreference(storage: HistoryStorage | null): ThemePreference {
+/**
+ * The user's explicit choice, or null when there is none (follow the OS). Old saved values such
+ * as "system" (from the earlier 3-option control) or anything unexpected also mean null.
+ */
+export function loadThemeChoice(storage: HistoryStorage | null): Theme | null {
   try {
     const value = storage?.getItem(THEME_STORAGE_KEY);
-    return isThemePreference(value) ? value : 'system';
+    return isTheme(value) ? value : null;
   } catch {
-    return 'system';
+    return null;
   }
 }
 
-export function saveThemePreference(storage: HistoryStorage | null, theme: ThemePreference): void {
+export function saveThemeChoice(storage: HistoryStorage | null, theme: Theme): void {
   try {
-    if (theme === 'system') {
-      storage?.removeItem(THEME_STORAGE_KEY);
-    } else {
-      storage?.setItem(THEME_STORAGE_KEY, theme);
-    }
+    storage?.setItem(THEME_STORAGE_KEY, theme);
   } catch {
     // Storage blocked: the choice works until the page is reloaded.
   }
 }
 
-/** "system" removes the attribute, so the CSS media query decides. */
-export function applyThemePreference(root: HTMLElement, theme: ThemePreference): void {
-  if (theme === 'system') {
+/** null removes the attribute, so the CSS media query decides. */
+export function applyThemeChoice(root: HTMLElement, choice: Theme | null): void {
+  if (choice === null) {
     root.removeAttribute('data-theme');
   } else {
-    root.setAttribute('data-theme', theme);
+    root.setAttribute('data-theme', choice);
   }
+}
+
+/** The theme on screen: the explicit choice, otherwise the OS setting. */
+export function resolveTheme(choice: Theme | null, systemPrefersDark: boolean): Theme {
+  return choice ?? (systemPrefersDark ? 'dark' : 'light');
+}
+
+export function oppositeTheme(theme: Theme): Theme {
+  return theme === 'dark' ? 'light' : 'dark';
+}
+
+/**
+ * Radius of the circle that, centred on (x, y), covers the whole viewport: the distance to the
+ * farthest corner. Used by the circular theme-switch reveal.
+ */
+export function revealRadius(x: number, y: number, width: number, height: number): number {
+  return Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
 }

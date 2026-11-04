@@ -1,6 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import {
-  formatAmount,
   formatDate,
   formatDateTime,
   formatDocumentType,
@@ -10,7 +9,18 @@ import {
 } from '../lib/format';
 import type { CompletedAnalysis } from '../lib/analysisState';
 import type { AnalyzeMeta } from '../lib/schema';
+import { formatAmountValue, initials } from './displayFormat';
 import { ExtractionNotices } from './ExtractionNotices';
+import {
+  BuildingIcon,
+  CalendarIcon,
+  CheckIcon,
+  CoinsIcon,
+  FileTextIcon,
+  ListIcon,
+  TagIcon,
+  UsersIcon,
+} from './icons';
 import { JsonPanel } from './JsonPanel';
 
 interface ResultViewProps {
@@ -18,26 +28,23 @@ interface ResultViewProps {
   onNewFile: () => void;
 }
 
-const NO_DATA = <p className="muted">Brak danych</p>;
+const NO_DATA = <p className="empty">Brak danych</p>;
 
-/** Renders `items` as a list, or "Brak danych" when empty (never hides a section silently). */
-function ListOrEmpty<T>({ items, render }: { items: T[]; render: (item: T) => ReactNode }) {
-  if (items.length === 0) {
-    return NO_DATA;
-  }
-  return (
-    <ul className="list">
-      {items.map((item, index) => (
-        <li key={index}>{render(item)}</li>
-      ))}
-    </ul>
-  );
+interface CardProps {
+  title: string;
+  icon: ReactNode;
+  wide?: boolean;
+  children: ReactNode;
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/** One dashboard card; `wide` spans both columns on large screens. */
+function Card({ title, icon, wide = false, children }: CardProps) {
   return (
-    <section className="card">
-      <h3 className="card__title">{title}</h3>
+    <section className={`card${wide ? ' dashboard__wide' : ''}`}>
+      <h3 className="card__title">
+        {icon}
+        {title}
+      </h3>
       {children}
     </section>
   );
@@ -54,13 +61,13 @@ function MetaLine({ meta }: { meta: AnalyzeMeta }) {
 }
 
 /**
- * F-05: readable results. All values are rendered as text nodes (escaped by React).
- * Elements marked `no-print` are hidden when the page is printed or saved as PDF.
+ * F-05: readable results as a dashboard. All values are rendered as text nodes (escaped by
+ * React). Elements marked `no-print` are hidden when the page is printed or saved as PDF.
  */
 export function ResultView({ analysis, onNewFile }: ResultViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const { result, findings, meta } = analysis;
-  const { document: doc } = result;
+  const { document: doc, entities } = result;
 
   // Move focus to the results so screen reader users hear that the analysis is done.
   useEffect(() => {
@@ -82,93 +89,150 @@ export function ResultView({ analysis, onNewFile }: ResultViewProps) {
         <time dateTime={analysis.analyzedAt}>{formatDateTime(analysis.analyzedAt)}</time>
       </p>
 
-      <ExtractionNotices findings={findings} />
+      <div className="dashboard reveal">
+        <ExtractionNotices findings={findings} />
 
-      <section className="card" aria-labelledby="doc-title">
-        <p className="eyebrow">{formatDocumentType(doc.type)}</p>
-        <h3 id="doc-title" className="doc-title">
-          {doc.title ?? 'Dokument bez tytułu'}
-        </h3>
-        <dl className="facts">
-          <div>
-            <dt>Plik</dt>
-            <dd className="break">{doc.fileName}</dd>
+        <section className="card dashboard__wide" aria-labelledby="doc-title">
+          <div className="doc-card__top">
+            <span className="badge">{formatDocumentType(doc.type)}</span>
+            <span className="doc-card__file">
+              <FileTextIcon />
+              <span className="visually-hidden">Plik: </span>
+              {doc.fileName}
+            </span>
           </div>
-          <div>
-            <dt>Język</dt>
-            <dd>{formatLanguage(doc.language)}</dd>
-          </div>
-          <div>
-            <dt>Data dokumentu</dt>
-            <dd>
-              {doc.date ? <time dateTime={doc.date}>{formatDate(doc.date)}</time> : 'Brak danych'}
-            </dd>
-          </div>
-          <div>
-            <dt>Liczba stron</dt>
-            <dd>{formatPageCount(doc.pages)}</dd>
-          </div>
-        </dl>
-      </section>
+          <h3 id="doc-title" className="doc-card__title">
+            {doc.title ?? 'Dokument bez tytułu'}
+          </h3>
+          <dl className="meta-chips">
+            <div className="meta-chip">
+              <dt>Język</dt>
+              <dd>{formatLanguage(doc.language)}</dd>
+            </div>
+            <div className="meta-chip">
+              <dt>Data dokumentu</dt>
+              <dd>
+                {doc.date ? <time dateTime={doc.date}>{formatDate(doc.date)}</time> : 'Brak danych'}
+              </dd>
+            </div>
+            <div className="meta-chip">
+              <dt>Liczba stron</dt>
+              <dd>{formatPageCount(doc.pages)}</dd>
+            </div>
+          </dl>
+        </section>
 
-      <Section title="Podsumowanie">
-        <p className="summary">{result.summary}</p>
-      </Section>
+        <Card title="Podsumowanie" icon={<FileTextIcon />} wide>
+          <p className="summary">{result.summary}</p>
+        </Card>
 
-      <Section title="Najważniejsze punkty">
-        <ListOrEmpty items={result.keyPoints} render={(point) => point} />
-      </Section>
+        <Card title="Najważniejsze punkty" icon={<ListIcon />}>
+          {result.keyPoints.length === 0 ? (
+            NO_DATA
+          ) : (
+            <ul className="checklist">
+              {result.keyPoints.map((point, index) => (
+                <li key={index}>
+                  <span className="checklist__icon" aria-hidden="true">
+                    <CheckIcon />
+                  </span>
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
 
-      <div className="grid">
-        <Section title="Organizacje">
-          <ListOrEmpty items={result.entities.organizations} render={(name) => name} />
-        </Section>
-        <Section title="Osoby">
-          <ListOrEmpty items={result.entities.people} render={(name) => name} />
-        </Section>
+        <Card title="Podmioty" icon={<UsersIcon />}>
+          <div className="entities">
+            <div>
+              <h4 className="entities__title">Organizacje</h4>
+              {entities.organizations.length === 0 ? (
+                NO_DATA
+              ) : (
+                <ul className="entity-list">
+                  {entities.organizations.map((name, index) => (
+                    <li key={index}>
+                      <span className="avatar" aria-hidden="true">
+                        <BuildingIcon />
+                      </span>
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div>
+              <h4 className="entities__title">Osoby</h4>
+              {entities.people.length === 0 ? (
+                NO_DATA
+              ) : (
+                <ul className="entity-list">
+                  {entities.people.map((name, index) => (
+                    <li key={index}>
+                      <span className="avatar" aria-hidden="true">
+                        {initials(name)}
+                      </span>
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Kwoty" icon={<CoinsIcon />}>
+          {result.amounts.length === 0 ? (
+            NO_DATA
+          ) : (
+            <ul className="amounts">
+              {result.amounts.map((amount, index) => (
+                <li key={index} className="amount">
+                  <span className="amount__value">
+                    {formatAmountValue(amount.value)}
+                    <span className="badge">{amount.currency}</span>
+                  </span>
+                  <span className="amount__context">{amount.context}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card title="Daty" icon={<CalendarIcon />}>
+          {result.dates.length === 0 ? (
+            NO_DATA
+          ) : (
+            <ol className="timeline">
+              {result.dates.map((entry, index) => (
+                <li key={index}>
+                  <time className="timeline__date" dateTime={entry.date}>
+                    {formatDate(entry.date)}
+                  </time>
+                  <span className="timeline__context">{entry.context}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
+
+        <Card title="Słowa kluczowe" icon={<TagIcon />} wide>
+          {result.keywords.length === 0 ? (
+            NO_DATA
+          ) : (
+            <ul className="tags">
+              {result.keywords.map((keyword, index) => (
+                <li key={index} className="tag">
+                  {keyword}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <JsonPanel result={result} pdfFileName={analysis.fileName} />
       </div>
-
-      <Section title="Kwoty">
-        <ListOrEmpty
-          items={result.amounts}
-          render={(amount) => (
-            <>
-              <span className="value">{formatAmount(amount.value, amount.currency)}</span>
-              <span className="context">{amount.context}</span>
-            </>
-          )}
-        />
-      </Section>
-
-      <Section title="Daty">
-        <ListOrEmpty
-          items={result.dates}
-          render={(entry) => (
-            <>
-              <time className="value" dateTime={entry.date}>
-                {formatDate(entry.date)}
-              </time>
-              <span className="context">{entry.context}</span>
-            </>
-          )}
-        />
-      </Section>
-
-      <Section title="Słowa kluczowe">
-        {result.keywords.length === 0 ? (
-          NO_DATA
-        ) : (
-          <ul className="tags">
-            {result.keywords.map((keyword, index) => (
-              <li key={index} className="tag">
-                {keyword}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
-
-      <JsonPanel result={result} pdfFileName={analysis.fileName} />
 
       {meta && <MetaLine meta={meta} />}
     </div>

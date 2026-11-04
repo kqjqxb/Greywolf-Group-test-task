@@ -1,0 +1,108 @@
+/*
+ * Print / "Save as PDF". Browsers drop background colours when printing, so a filled button
+ * would become white text on white. Controls make no sense on paper anyway: hide them and print
+ * the result in black on white.
+ */
+@media print {
+  /* Paper is always light: this switches every light-dark() colour to its light value. */
+  :root,
+  :root[data-theme] {
+    color-scheme: light;
+  }
+
+  :root,
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  body::before,
+  .no-print,
+  .button,
+  .icon-button,
+  .dropzone,
+  .visually-hidden {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+    font-size: 0.875rem;
+  }
+
+  * {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .header,
+  .header--scrolled {
+    position: static;
+    background: none;
+    border-bottom: 1px solid #000000;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .brand__mark {
+    display: none;
+  }
+
+  /* Everything in black: muted greys, brand colours and icons (stroke = currentColor). */
+  body * {
+    color: #000000 !important;
+  }
+
+  .app {
+    padding-block: 1rem;
+  }
+
+  .card,
+  .amount,
+  .notice,
+  .tag,
+  .badge,
+  .meta-chip,
+  .avatar,
+  .checklist__icon {
+    background: none;
+    border-color: #808080;
+  }
+
+  .card {
+    break-inside: avoid;
+  }
+
+  .meta-chip,
+  .badge {
+    border: 1px solid #808080;
+  }
+
+  /* Long lists may continue on the next page; keep single items together instead. */
+  .checklist li,
+  .timeline li,
+  .amount {
+    break-inside: avoid;
+  }
+
+  .timeline li::after {
+    border-color: #000000;
+    background: #ffffff;
+  }
+
+  .dashboard {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .results__title {
+    break-after: avoid;
+  }
+
+  .result-meta {
+    align-self: flex-start;
+    text-align: left;
+  }
+}

@@ -175,17 +175,21 @@ export function App() {
   return (
     <>
       <AppHeader />
-      <main className="app">
+      <main className="container app">
         <p className="visually-hidden" role="status" aria-live="polite">
           {announcement(state)}
         </p>
 
         {state.status === 'idle' && (
           <>
-            <p className="lead">
-              Wgraj plik PDF, a AI przygotuje krótkie podsumowanie i wyciągnie najważniejsze dane:
-              strony dokumentu, kwoty, daty i słowa kluczowe. Wynik pobierzesz jako JSON.
-            </p>
+            <div className="hero">
+              <h2 className="hero__title">
+                Zamień PDF w <span className="hero__keyword">konkretne dane</span>
+              </h2>
+              <p className="hero__subtitle">
+                AI streszcza PDF i wyciąga kwoty, daty, strony i słowa kluczowe.
+              </p>
+            </div>
             <UploadZone onFiles={handleFiles} inputRef={fileInputRef} />
             <PrivacyNotice />
             <EmptyState />
@@ -202,6 +206,7 @@ export function App() {
           <ProgressView
             step={state.status}
             ocrPage={state.status === 'reading' ? state.ocrPage : null}
+            ocrUsed={state.status === 'analyzing' && state.findings.ocrPages.length > 0}
             fileName={state.file.name}
             startedAt={state.startedAt}
           />
@@ -220,7 +225,7 @@ export function App() {
         )}
       </main>
       <footer className="footer no-print">
-        <p>
+        <p className="container">
           PDF Insight · plik jest odczytywany w przeglądarce, do analizy AI trafia tylko jego tekst.
         </p>
       </footer>

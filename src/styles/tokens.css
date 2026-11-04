@@ -1,0 +1,99 @@
+/*
+ * Design tokens (docs/DESIGN.md). Colours use light-dark(<light>, <dark>), picked by
+ * `color-scheme`: by default the OS setting decides (pure CSS); data-theme on <html>, set from
+ * lib/theme.ts, overrides it. src/lib/contrast.test.ts reads the pairs from THIS file and checks
+ * WCAG AA in both themes: text ≥ 4.5:1, large text / UI boundaries / focus ring ≥ 3:1.
+ * Keep checked colours as `light-dark(#rrggbb, #rrggbb)` (or rgb(r g b / a) for the
+ * translucent ones) so the test can parse them.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* ---- Surfaces ---- */
+  --bg: light-dark(#f6f7fb, #0a0e1a);
+  /* Opaque card colour; also the fallback the contrast test uses for glass. */
+  --surface: light-dark(#ffffff, #121829);
+  /* Glass: the same colour, translucent (light 78 %, dark 72 %). */
+  --surface-glass: light-dark(rgb(255 255 255 / 0.78), rgb(18 24 41 / 0.72));
+  --surface-raised: light-dark(#ffffff, #182036);
+  --code-bg: light-dark(#0f172a, #060912);
+  --code-text: light-dark(#e2e8f0, #e2e8f0);
+
+  /* ---- Text ---- */
+  --text: light-dark(#0f172a, #e7e9f3);
+  --muted: light-dark(#4a5568, #a4abc4);
+
+  /* ---- Lines ---- */
+  /* Decorative edges (cards, separators): no contrast requirement. */
+  --border: light-dark(rgb(79 70 229 / 0.12), rgb(165 180 252 / 0.16));
+  /* Boundaries that identify a control (drop zone, theme button): ≥ 3:1. */
+  --border-strong: light-dark(#707a9f, #6b759b);
+
+  /* ---- Brand ---- */
+  --primary: light-dark(#4f46e5, #8b93f8);
+  --primary-hover: light-dark(#4338ca, #a5acfa);
+  --on-primary: light-dark(#ffffff, #0a0e1a);
+  /* Soft tint behind step numbers, pills, info notices, hover rows. */
+  --primary-soft: light-dark(#eceeff, #1c2246);
+  --accent-lavender: light-dark(#7c3aed, #b79cfb);
+  --accent-peach: light-dark(#fdba8c, #f4a27a);
+  --focus: light-dark(#7c3aed, #c4b5fd);
+
+  /* ---- Semantic ---- */
+  --info-text: light-dark(#3730a3, #c7cbfd);
+  --warning-text: light-dark(#7a3e0c, #fcd9a0);
+  --warning-soft: light-dark(#fff4e5, #2a1e10);
+  --warning-border: light-dark(#b8640f, #d9963a);
+  --error: light-dark(#b42318, #fda4a4);
+  --error-soft: light-dark(#fef1f1, #2a1220);
+  --success: light-dark(#17724a, #86e0b0);
+  --success-soft: light-dark(#e9f9f1, #0f2a22);
+
+  /* ---- Background blobs: static radial gradients, see base.css ---- */
+  --blob-indigo: light-dark(rgb(165 180 252 / 0.35), rgb(165 180 252 / 0.16));
+  --blob-lavender: light-dark(rgb(196 181 253 / 0.35), rgb(196 181 253 / 0.16));
+  --blob-peach: light-dark(rgb(254 215 170 / 0.35), rgb(254 215 170 / 0.1));
+
+  /* ---- Depth: tinted shadow in light, border glow in dark ---- */
+  --shadow-near: light-dark(rgb(15 23 42 / 0.04), rgb(0 0 0 / 0));
+  --shadow-far: light-dark(rgb(79 70 229 / 0.08), rgb(139 147 248 / 0.07));
+  --glow-edge: light-dark(rgb(0 0 0 / 0), rgb(165 180 252 / 0.1));
+  --shadow:
+    0 1px 2px var(--shadow-near), 0 8px 24px var(--shadow-far), inset 0 0 0 1px var(--glow-edge);
+
+  /* ---- Typography ---- */
+  --font-sans: 'Manrope Variable', 'Manrope Fallback', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --text-display: clamp(2rem, 4.5vw, 3.25rem);
+  --measure: 68ch;
+
+  /* ---- Shape ---- */
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-dropzone: 28px;
+  --radius-pill: 999px;
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+
+  /* ---- Layout ---- */
+  --container: 1040px;
+  --gutter: 16px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --gutter: 24px;
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
