@@ -1,0 +1,74 @@
+/* Entrance animation, theme-switch transition, and the reduced-motion override. */
+
+/* Cards fade up 8px when a view first appears, staggered by 30 ms (DESIGN: ≤ 40 ms). */
+.reveal > * {
+  animation: fade-up var(--duration-slow) var(--ease) both;
+}
+
+.reveal > :nth-child(2) {
+  animation-delay: 30ms;
+}
+
+.reveal > :nth-child(3) {
+  animation-delay: 60ms;
+}
+
+.reveal > :nth-child(4) {
+  animation-delay: 90ms;
+}
+
+.reveal > :nth-child(5) {
+  animation-delay: 120ms;
+}
+
+.reveal > :nth-child(6) {
+  animation-delay: 150ms;
+}
+
+.reveal > :nth-child(7) {
+  animation-delay: 180ms;
+}
+
+.reveal > :nth-child(n + 8) {
+  animation-delay: 210ms;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * Theme switch (ThemeToggle.tsx): the View Transitions API snapshots the old page, and JS
+ * animates a growing circle (clip-path) on the new snapshot from the button. The default
+ * cross-fade is turned off so only the circle is visible.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The pulse would otherwise freeze half-visible; skeleton keeps its static tint. */
+  .stepper__step--active .stepper__dot::after {
+    display: none;
+  }
+}
