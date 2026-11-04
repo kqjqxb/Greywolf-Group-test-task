@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sampleResult } from '../lib/fixtures/sample-result';
 import { AppError, type AppErrorCode } from '../lib/errors';
-import { analyze } from './client';
+import { analyze, ANALYZE_TIMEOUT_MS } from './client';
 
 const request = { fileName: 'umowa.pdf', pages: 4, text: 'Tekst' };
 
@@ -25,6 +25,16 @@ describe('analyze', () => {
   it('returns the validated result', async () => {
     mockFetchResponse({ result: sampleResult });
     await expect(analyze(request)).resolves.toEqual(sampleResult);
+  });
+
+  it('accepts the optional meta and returns only the result', async () => {
+    const meta = { model: 'gemini-3.6-flash', promptVersion: '1.0.0', durationMs: 9000 };
+    mockFetchResponse({ result: sampleResult, meta });
+    await expect(analyze(request)).resolves.toEqual(sampleResult);
+  });
+
+  it('waits longer than the worker budget (26 s) by default', () => {
+    expect(ANALYZE_TIMEOUT_MS).toBeGreaterThan(26_000);
   });
 
   it('maps a worker error body to its code', async () => {

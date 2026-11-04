@@ -13,8 +13,22 @@ const normalize = (text: string) => text.replace(/\s/g, ' ');
 describe('formatAmount', () => {
   it('formats per currency in pl-PL', () => {
     expect(normalize(formatAmount(184500, 'PLN'))).toBe('184 500,00 zł');
-    expect(normalize(formatAmount(8600, 'EUR'))).toBe('8600,00 €');
     expect(normalize(formatAmount(890, 'USD'))).toBe('890,00 USD');
+  });
+
+  it.each([
+    [8600, 'EUR', '8 600,00 €'],
+    [1234.5, 'PLN', '1 234,50 zł'],
+    [13100, 'PLN', '13 100,00 zł'],
+    [42435, 'PLN', '42 435,00 zł'],
+    [184500, 'PLN', '184 500,00 zł'],
+    [226935, 'PLN', '226 935,00 zł'],
+  ])('groups thousands for 4-, 5- and 6-digit values: %d %s → %s', (value, currency, expected) => {
+    expect(normalize(formatAmount(value, currency))).toBe(expected);
+  });
+
+  it('falls back to the raw value for an unknown currency code', () => {
+    expect(formatAmount(10, 'nope')).toBe('10 nope');
   });
 });
 

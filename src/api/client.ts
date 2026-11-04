@@ -7,8 +7,12 @@ import {
 } from '../lib/schema';
 import { API_URL } from './config';
 
-/** How long `analyze` waits for the worker before giving up. */
-export const ANALYZE_TIMEOUT_MS = 30_000;
+/**
+ * How long `analyze` waits for the worker before giving up. Kept above the worker's own
+ * request budget (26 s, worker/src/ai/analyze.ts), so the worker normally answers first
+ * with a precise error (e.g. ai_timeout) instead of the browser cutting the request.
+ */
+export const ANALYZE_TIMEOUT_MS = 32_000;
 
 /**
  * Dev-only mock (see .env.example). `import.meta.env.DEV` is the literal `false` in

@@ -6,15 +6,17 @@ import {
   formatLanguage,
   formatPageCount,
 } from '../lib/format';
+import type { ExtractionFindings } from '../lib/analysisState';
 import type { AnalysisResult } from '../lib/schema';
 import { EmptyPagesWarning } from './EmptyPagesWarning';
+import { InjectionNotice } from './InjectionNotice';
 import { JsonPanel } from './JsonPanel';
 
 interface ResultViewProps {
   result: AnalysisResult;
   /** Name of the uploaded file (used for the JSON file name). */
   pdfFileName: string;
-  emptyPages: number[];
+  findings: ExtractionFindings;
   onNewFile: () => void;
 }
 
@@ -44,7 +46,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** F-05: readable results. All values are rendered as text nodes (escaped by React). */
-export function ResultView({ result, pdfFileName, emptyPages, onNewFile }: ResultViewProps) {
+export function ResultView({ result, pdfFileName, findings, onNewFile }: ResultViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const { document: doc } = result;
 
@@ -64,7 +66,8 @@ export function ResultView({ result, pdfFileName, emptyPages, onNewFile }: Resul
         </button>
       </div>
 
-      <EmptyPagesWarning pages={emptyPages} />
+      <EmptyPagesWarning pages={findings.emptyPages} />
+      {findings.injectionSuspected && <InjectionNotice />}
 
       <section className="card" aria-labelledby="doc-title">
         <p className="eyebrow">{formatDocumentType(doc.type)}</p>

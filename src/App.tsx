@@ -11,6 +11,7 @@ import { analysisReducer, initialAnalysisState, type AnalysisState } from './lib
 import { buildAnalyzeRequest } from './lib/analyzeRequest';
 import { AppError, errorMessage, isRetryable, toErrorCode } from './lib/errors';
 import { validatePdfFile } from './lib/fileValidation';
+import { looksLikePromptInjection } from './lib/injection';
 import { extractPdfText } from './lib/pdf';
 
 /** Text for the screen reader live region, one per state. */
@@ -43,7 +44,8 @@ export function App() {
       }
       const { pageTexts, emptyPages } = await extractPdfText(await file.arrayBuffer());
       const request = buildAnalyzeRequest(file.name, pageTexts);
-      dispatch({ type: 'extracted', emptyPages });
+      const injectionSuspected = looksLikePromptInjection(pageTexts.join('\n'));
+      dispatch({ type: 'extracted', findings: { emptyPages, injectionSuspected } });
       const result = await analyze(request);
       dispatch({ type: 'succeeded', result });
     } catch (error) {
@@ -108,7 +110,7 @@ export function App() {
           <ResultView
             result={state.result}
             pdfFileName={state.file.name}
-            emptyPages={state.emptyPages}
+            findings={state.findings}
             onNewFile={pickAnotherFile}
           />
         )}

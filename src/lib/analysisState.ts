@@ -13,14 +13,22 @@ import type { AnalysisResult } from './schema';
 export type AnalysisState =
   | { status: 'idle' }
   | { status: 'reading'; file: File; startedAt: number }
-  | { status: 'analyzing'; file: File; startedAt: number; emptyPages: number[] }
-  | { status: 'success'; file: File; result: AnalysisResult; emptyPages: number[] }
+  | { status: 'analyzing'; file: File; startedAt: number; findings: ExtractionFindings }
+  | { status: 'success'; file: File; result: AnalysisResult; findings: ExtractionFindings }
   /** `file` is null when the error happened before a valid file was accepted. */
   | { status: 'error'; file: File | null; code: AppErrorCode };
 
+/** What the browser noticed in the PDF text before the analysis; shown next to the result. */
+export interface ExtractionFindings {
+  /** 1-based numbers of pages without a text layer. */
+  emptyPages: number[];
+  /** The text contains phrases that look like instructions for an AI (see lib/injection.ts). */
+  injectionSuspected: boolean;
+}
+
 export type AnalysisAction =
   | { type: 'start'; file: File; now: number }
-  | { type: 'extracted'; emptyPages: number[] }
+  | { type: 'extracted'; findings: ExtractionFindings }
   | { type: 'succeeded'; result: AnalysisResult }
   | { type: 'failed'; code: AppErrorCode; file: File | null }
   | { type: 'reset' };
@@ -39,7 +47,7 @@ export function analysisReducer(state: AnalysisState, action: AnalysisAction): A
         status: 'analyzing',
         file: state.file,
         startedAt: state.startedAt,
-        emptyPages: action.emptyPages,
+        findings: action.findings,
       };
     case 'succeeded':
       if (state.status !== 'analyzing') {
@@ -49,7 +57,7 @@ export function analysisReducer(state: AnalysisState, action: AnalysisAction): A
         status: 'success',
         file: state.file,
         result: action.result,
-        emptyPages: state.emptyPages,
+        findings: state.findings,
       };
     case 'failed':
       return { status: 'error', file: action.file, code: action.code };
