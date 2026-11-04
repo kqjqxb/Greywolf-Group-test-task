@@ -8,8 +8,8 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 ## Decyzje (ADR w skrócie)
 | # | Decyzja | Uzasadnienie | Status |
 |---|---|---|---|
-| D1 | Backend: Cloudflare Worker | darmowy, secrets, łatwy CORS i rate limit, brak cold startu | proponowane |
-| D2 | LLM: Gemini Flash (free tier), tryb JSON / responseSchema | darmowe limity, długi kontekst, natywne structured output | do potwierdzenia |
+| D1 | Backend: Cloudflare Worker | darmowy, secrets, łatwy CORS i rate limit, brak cold startu | przyjęte |
+| D2 | LLM: Gemini Flash (free tier), tryb JSON / responseSchema | darmowe limity, długi kontekst, natywne structured output | przyjęte |
 | D3 | Ekstrakcja tekstu w przeglądarce (pdf.js), do API trafia tylko tekst | mniejszy payload, plik nie opuszcza przeglądarki w całości | proponowane |
 | D4 | OCR: tesseract.js tylko dla stron bez warstwy tekstowej | test PDF ma skan aneksu (str. 11) — zmienia kwoty | proponowane |
 | D5 | Jeden schemat Zod współdzielony przez front i worker | jedno źródło prawdy, testy Vitest | proponowane |
@@ -19,9 +19,9 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 
 ### Etap 0 — Kontekst i setup (≈1 h)
 - [x] `docs/BRIEF.md`, `CLAUDE.md`, `PLAN.md`, `AI_LOG.md`
-- [ ] Vite + React + TS strict, ESLint + Prettier, Vitest
-- [ ] Struktura `src/components`, `src/lib`, `src/api`; `worker/`
-- [ ] `.gitignore`, `.env.example`
+- [x] Vite + React + TS strict, ESLint + Prettier, Vitest
+- [x] Struktura `src/components`, `src/lib`, `src/api`; `worker/`
+- [x] `.gitignore`, `.env.example`
 
 ### Etap 1 — Walking skeleton na produkcji (≈3 h) ⚠️ priorytet
 - [ ] Worker: endpoint `POST /analyze` (na razie stub), CORS allowlist

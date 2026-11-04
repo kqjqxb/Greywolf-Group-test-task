@@ -4,7 +4,7 @@ Recruitment task with a hard 24 h deadline. Spec: `docs/BRIEF.md` (source of tru
 Human owner must be able to explain every line — prefer simple, explicit code over clever code.
 
 ## Architecture
-- `src/` — React 18 + Vite + TypeScript (strict) SPA, deployed to GitHub Pages at `/Greywolf-Group-test-task/`.
+- `src/` — React 19 + Vite + TypeScript (strict) SPA, deployed to GitHub Pages at `/Greywolf-Group-test-task/`.
   - `src/components/` UI · `src/lib/` pure logic (pdf extraction, schema, chunking, history) · `src/api/` HTTP client for the worker.
 - `worker/` — Cloudflare Worker: API proxy holding the LLM key, CORS allowlist, rate limit, size limit, prompt, retry.
 - Shared schema: Zod in `src/lib/schema.ts`; the worker validates with the same schema (single source).
@@ -24,4 +24,13 @@ Human owner must be able to explain every line — prefer simple, explicit code 
 - Mark finished tasks in `PLAN.md` (`[x]`).
 
 ## Commands
-(fill in once scaffolded)
+Node 22, single root `package.json` (frontend + worker share one `node_modules`).
+- `npm run dev` — Vite dev server · `npm run build` — typecheck app + production build to `dist/` · `npm run preview`
+- `npm run lint` — ESLint (type-aware) · `npm run typecheck` — tsc for app (`tsconfig.json`), `vite.config.ts` (`tsconfig.node.json`) and worker (`worker/tsconfig.json`)
+- `npm test` — Vitest (watch); `npm test -- --run` for a single run (CI)
+- `npm run format` / `npm run format:check` — Prettier (Markdown is excluded in `.prettierignore`)
+- `npm run worker:dev` — local worker on http://localhost:8787 (secrets from `worker/.dev.vars`, copy from `.dev.vars.example`)
+- `npm run worker:deploy` — deploy worker; set the key once with `npx wrangler secret put GEMINI_API_KEY --config worker/wrangler.toml`
+- Full check: `npm run lint && npm run typecheck && npm test -- --run && npm run build`
+
+Version pins: `eslint@9` (eslint-plugin-react does not support ESLint 10 yet), `typescript@~6.0` (typescript-eslint requires TS < 6.1).
