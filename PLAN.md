@@ -9,11 +9,12 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 | # | Decyzja | Uzasadnienie | Status |
 |---|---|---|---|
 | D1 | Backend: Cloudflare Worker | darmowy, secrets, łatwy CORS i rate limit, brak cold startu | przyjęte |
-| D2 | LLM: Gemini Flash (free tier), tryb JSON / responseSchema | darmowe limity, długi kontekst, natywne structured output | przyjęte |
-| D3 | Ekstrakcja tekstu w przeglądarce (pdf.js), do API trafia tylko tekst | mniejszy payload, plik nie opuszcza przeglądarki w całości | proponowane |
-| D4 | OCR: tesseract.js tylko dla stron bez warstwy tekstowej | test PDF ma skan aneksu (str. 11) — zmienia kwoty | proponowane |
-| D5 | Jeden schemat Zod współdzielony przez front i worker | jedno źródło prawdy, testy Vitest | proponowane |
-| D6 | Brak routera (jeden widok) | brak problemów z routingiem na Pages | proponowane |
+| D2 | LLM: Claude Haiku 5.5 (główny) → Gemini Flash → Gemini Flash-Lite (fallback) | darmowy Gemini: 20 zapytań/dzień/model i częste 503; Haiku ≈ $0,0023/analizę, stabilny, API nie trenuje na danych; budżet chroniony dziennym limitem w KV + kredyt prepaid | przyjęte (zmienione w Etapie 4) |
+| D3 | Ekstrakcja tekstu w przeglądarce (pdf.js), do API trafia tylko tekst | mniejszy payload, plik nie opuszcza przeglądarki w całości | przyjęte |
+| D4 | OCR: tesseract.js tylko dla stron bez warstwy tekstowej | test PDF ma skan aneksu (str. 11) — zmienia kwoty | przyjęte (assety self-hosted, CSP bez zmian) |
+| D5 | Jeden schemat Zod współdzielony przez front i worker | jedno źródło prawdy, testy Vitest | przyjęte |
+| D6 | Brak routera (jeden widok) | brak problemów z routingiem na Pages | przyjęte |
+| D7 | Cache wyników w KV (SHA-256 tekstu + wersja promptu, 14 dni) | recenzenci wgrywają ten sam test PDF → 0 kosztów i ~0,1 s przy powtórce | przyjęte |
 
 ## Etapy
 
@@ -42,20 +43,20 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 - [ ] ✅ Kryterium: test PDF → wynik < 30 s na demo
 
 ### Etap 3 — Bezpieczeństwo (≈2 h)
-- [ ] Rate limit w workerze (per IP), limit rozmiaru body
-- [ ] Obrona przed prompt injection: delimitery + instrukcja systemowa + walidacja wyniku
-- [ ] (+) Wykrywanie podejrzanych fraz i ostrzeżenie w UI („Wykryto możliwą próbę manipulacji AI”)
-- [ ] Sprawdzenie historii Git pod kątem sekretów (`git log -p | grep`), gitleaks w CI (opcjonalnie)
+- [x] Rate limit w workerze (per IP), limit rozmiaru body
+- [x] Obrona przed prompt injection: delimitery + instrukcja systemowa + walidacja wyniku
+- [x] (+) Wykrywanie podejrzanych fraz i ostrzeżenie w UI („Wykryto możliwą próbę manipulacji AI”)
+- [x] Sprawdzenie historii Git pod kątem sekretów (`git log -p | grep`), gitleaks w CI (opcjonalnie — nie dodany; historia sprawdzona ręcznie: 0 kluczy)
 
 ### Etap 4 — SHOULD / COULD (≈4 h)
-- [ ] F-08 Chunking długich dokumentów (map → reduce), łączenie i deduplikacja encji/kwot/dat
-- [ ] F-09 Historia analiz w localStorage (ostatnie N, z try/catch)
-- [ ] F-10 OCR stron bez tekstu (tesseract.js, `pol+eng`), lazy-load
+- [x] F-08 Chunking długich dokumentów (map → reduce), łączenie i deduplikacja encji/kwot/dat
+- [x] F-09 Historia analiz w localStorage (ostatnie N, z try/catch)
+- [x] F-10 OCR stron bez tekstu (tesseract.js, `pol+eng`), lazy-load
 
 ### Etap 5 — Jakość AI: ewaluacja (≈2 h)
-- [ ] `eval/` — golden expectations dla test PDF (strony, typ, kwoty 184 500 PLN / 8 600 EUR / 890 USD, strony umowy, osoby, daty ISO, brak „1 PLN”)
-- [ ] Skrypt `npm run eval` — woła worker, porównuje, wypisuje wynik punktowy
-- [ ] Iteracje promptu z wersjonowaniem (`worker/src/prompt.ts`, changelog w AI_LOG)
+- [x] `eval/` — golden expectations dla test PDF (strony, typ, kwoty 184 500 PLN / 8 600 EUR / 890 USD, strony umowy, osoby, daty ISO, brak „1 PLN”)
+- [x] Skrypt `npm run eval` — woła worker, porównuje, wypisuje wynik punktowy
+- [x] Iteracje promptu z wersjonowaniem (`worker/src/prompt.ts`, changelog w AI_LOG)
 
 ### Etap 6 — UX i dostępność (≈2 h)
 - [ ] Responsywność od 360 px, focus states, obsługa klawiaturą, kontrast WCAG AA

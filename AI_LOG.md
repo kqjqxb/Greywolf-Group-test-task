@@ -34,6 +34,18 @@ Efekt: obie gałęzie zmergowane bez konfliktów, żaden agent nie musiał zmien
 
 Wynik: injection zignorowany, wszystkie waluty, 22 daty w ISO, 13,9 s.
 
+### 5. Decyzja oparta na pomiarach, nie na założeniach (Etap 3 → 4)
+Agent z Etapu 3 zmierzył 5 modeli Gemini na test PDF i odkrył limit **20 zapytań/dzień/model** w darmowym planie (oraz 30–40% odpowiedzi 503). Zamiast łatać fallbackami zmieniłem architekturę:
+> „Decision (made by the owner): Claude Haiku 5.5 becomes the PRIMARY model; the existing Gemini primary + fallback become the fallback chain. The Anthropic key is prepaid credit (~$4) — protecting the budget is a hard requirement.”
+
+Trzy warstwy ochrony budżetu: kredyt prepaid (twardy limit), dzienny licznik wywołań Claude w KV (150/dzień → potem Gemini), cache wyników (powtórna analiza = 0 kosztu). Zmierzony koszt: **$0,0023 / analizę, 7,2 s**, z cache **129 ms**.
+
+### Changelog promptu
+| Wersja | Zmiana | Powód |
+|---|---|---|
+| 1.0.0 | system prompt z regułami bezpieczeństwa, dokument w delimiterach, structured output | Etap 2 |
+| 1.1.0 | jedna pozycja na datę (scalone konteksty), pełna lista kwot, aneksy aktualizują wartości w podsumowaniu | ręczny review wyniku na demo: 28 dat z duplikatami, brak części kwot |
+
 ## Błędy AI i poprawki
 | # | Co AI zrobiło źle | Jak wykryto | Poprawka |
 |---|---|---|---|
@@ -45,6 +57,14 @@ Wynik: injection zignorowany, wszystkie waluty, 22 daty w ISO, 13,9 s.
 | 6 | Agent błędnie uznał, że nowy parametr `thinkingLevel` powoduje 502 | bezpośrednie zapytanie do Gemini (bez logowania klucza) | prawdziwa przyczyna: upstream 503 „high demand” → zadanie na fallback modelu |
 | 7 | Uruchomienie `vitest --root /` zaczęło skanować cały dysk | obserwacja procesu | przerwane; zasada: narzędzia tylko w katalogu projektu |
 | 8 | Test „Spróbuj ponownie” znajdował ukryty region `aria-live` z tym samym tekstem zamiast przycisku | czerwony test | wyszukiwanie po roli (`getByRole('button')`) |
+| 9 | Agent 4A zdiagnozował 502 jako „model pisze 6 zdań” i zaostrzył prompt | drugi przebieg z zapisanym surowym wynikiem: było 4 zdania | prawdziwy błąd: `countSentences` dzielił na „o.o.” i „S.A.”; poprawiony regex + test regresyjny z prawdziwego podsumowania. Lekcja: zapisuj surowy output przy pierwszej diagnozie |
+| 10 | Założenie, że SDK Anthropic wysyła klucz w `x-api-key` (SDK 1.x używa `Authorization`) | test z fałszywym `fetch` | poprawiony test; nie zgadywać kształtu API |
+| 11 | Pomiar 5× na głównym modelu zużył dzienny limit Gemini, zanim agent sprawdził `quotaId` | 429 utrzymujące się po kilku minutach | ograniczenie pomiarów do 3/model; limit RPD → zmiana decyzji D2 |
+| 12 | `useGrouping: 'always'` — testy Vitest zielone, `tsc` odrzucił typ | dopiero `npm run build` | `ES2023.Intl` w `lib`; Vitest nie sprawdza typów — zawsze pełny zestaw kontroli |
+| 13 | Zod sprawdza `new Function` → naruszenie CSP przypisane najpierw pdf.js | nasłuch `securitypolicyviolation` | `z.config({ jitless: true })` |
+| 14 | tesseract.js zawieszał się bez błędu (zapis cache do IndexedDB nigdy się nie kończył) | OCR „pending” w headless Chrome | `cacheMethod: 'none'`; potwierdzone włączeniem/wyłączeniem |
+| 15 | `createWorker` połyka błędy startu → ścieżka „OCR nie działa” też się zawieszała | zablokowanie plików językowych w przeglądarce | wrapper odrzucający przez `errorHandler` + 30 s timeout |
+| 16 | „Szary” przycisk „Pobierz JSON” zgłoszony jako bug UI | analiza: przy druku do PDF przeglądarka pomija tła → biały tekst na białym | style `@media print` zamiast „naprawiania” przycisku |
 
 ## Wnioski
 _(na koniec)_
