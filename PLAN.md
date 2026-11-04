@@ -27,8 +27,8 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 - [x] Worker: endpoint `POST /analyze` (na razie stub, 501), CORS allowlist (lista po przecinku, dokładne dopasowanie), limit body 2 MB, `GET /health`
 - [x] GitHub Actions: lint › typecheck › test › build › deploy Pages (`.github/workflows/deploy.yml`)
 - [x] `base` w vite.config, `VITE_API_URL` jako variable w Actions (w kodzie; zmienną trzeba ustawić w ustawieniach repo)
-- [ ] Deploy workera (`wrangler deploy`), klucz przez `wrangler secret put`
-- [ ] ✅ Kryterium: front na Pages woła worker i dostaje odpowiedź
+- [x] Deploy workera (`wrangler deploy`), klucz przez `wrangler secret put` → https://pdf-insight-api.kqjqxb.workers.dev
+- [x] ✅ Kryterium: front na Pages woła worker i dostaje odpowiedź
 
 ### Etap 2 — Rdzeń MUST (≈6 h)
 - [ ] F-01 Upload: drag & drop + input, walidacja typu (MIME + magic bytes `%PDF`) i rozmiaru ≤ 10 MB
