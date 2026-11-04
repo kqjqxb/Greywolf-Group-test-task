@@ -20,6 +20,12 @@ export const DOCUMENT_TYPES = ['faktura', 'umowa', 'oferta', 'raport', 'inne'] a
 /** ISO 8601 calendar date, e.g. "2026-03-12". */
 const IsoDate = z.iso.date();
 
+/**
+ * ISO 8601 date with reduced precision: a full date ("2026-03-12") or, when the document gives
+ * only a month and year (e.g. "10/2026" in a CV), a year-month ("2026-10"). Never a guessed day.
+ */
+const IsoDateOrMonth = z.union([IsoDate, z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)]);
+
 /** ISO 4217 currency code, e.g. "PLN". */
 const CurrencyCode = z.string().regex(/^[A-Z]{3}$/);
 
@@ -32,7 +38,7 @@ export const DocumentInfoSchema = z.object({
   language: z.string().regex(/^[a-z]{2}$/),
   type: z.enum(DOCUMENT_TYPES),
   title: z.string().min(1).nullable(),
-  date: IsoDate.nullable(),
+  date: IsoDateOrMonth.nullable(),
 });
 
 export const AmountSchema = z.object({
@@ -42,7 +48,7 @@ export const AmountSchema = z.object({
 });
 
 export const DateEntrySchema = z.object({
-  date: IsoDate,
+  date: IsoDateOrMonth,
   context: z.string().min(1),
 });
 
