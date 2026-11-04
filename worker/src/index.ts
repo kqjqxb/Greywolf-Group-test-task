@@ -4,7 +4,7 @@ import { errorResponse } from './http';
 import { handleAnalyze } from './routes/analyze';
 import { handleHealth } from './routes/health';
 
-async function route(request: Request, originAllowed: boolean): Promise<Response> {
+async function route(request: Request, env: Env, originAllowed: boolean): Promise<Response> {
   const { pathname } = new URL(request.url);
 
   // CORS preflight: only answered for allowed origins.
@@ -26,7 +26,7 @@ async function route(request: Request, originAllowed: boolean): Promise<Response
     if (!originAllowed) {
       return errorResponse('forbidden_origin', 403);
     }
-    return handleAnalyze(request);
+    return handleAnalyze(request, env);
   }
 
   return errorResponse('not_found', 404);
@@ -39,7 +39,7 @@ export default {
 
     let response: Response;
     try {
-      response = await route(request, originAllowed);
+      response = await route(request, env, originAllowed);
     } catch {
       response = errorResponse('internal_error', 500);
     }

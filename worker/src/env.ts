@@ -6,4 +6,6 @@ export interface Env {
    * Set in wrangler.toml [vars]; overridden locally in worker/.dev.vars.
    */
   ALLOWED_ORIGIN: string;
+  /** Gemini model id, e.g. "gemini-3.6-flash". Public, set in wrangler.toml [vars]. */
+  GEMINI_MODEL: string;
 }

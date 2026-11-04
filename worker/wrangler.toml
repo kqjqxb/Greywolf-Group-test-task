@@ -11,3 +11,5 @@ preview_urls = false
 # GEMINI_API_KEY is a secret: `wrangler secret put GEMINI_API_KEY` (prod) or worker/.dev.vars (local).
 [vars]
 ALLOWED_ORIGIN = "https://kqjqxb.github.io"
+# Gemini model id (free tier). Change here without touching code.
+GEMINI_MODEL = "gemini-3.6-flash"
