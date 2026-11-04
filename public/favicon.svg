@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- Document with a folded corner, in the app's primary colour. -->
-  <path d="M7 3h12l7 7v19H7z" fill="#1d4ed8"/>
+  <!-- Document with a folded corner, in the app's primary colour. The light outline keeps the
+       shape visible on dark browser tab bars (blue alone is ~2:1 there). -->
+  <path d="M7 3h12l7 7v19H7z" fill="#1d4ed8" stroke="#93c5fd" stroke-width="1.5" stroke-linejoin="round"/>
   <path d="M19 3v7h7" fill="#93c5fd"/>
   <path d="M11 16h11M11 20h11M11 24h7" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
 </svg>
