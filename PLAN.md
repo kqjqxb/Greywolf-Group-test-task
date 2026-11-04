@@ -40,7 +40,7 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 - [x] F-05 Widok wyników + podgląd JSON + pobranie `.json`
 - [x] F-06 Stany: pusty, ładowanie (z etapami), błąd z „Spróbuj ponownie”
 - [x] Informacja, że plik trafia do API AI
-- [ ] ✅ Kryterium: test PDF → wynik < 30 s na demo
+- [x] ✅ Kryterium: test PDF → wynik < 30 s na demo (zmierzone 15–18 s z OCR)
 
 ### Etap 3 — Bezpieczeństwo (≈2 h)
 - [x] Rate limit w workerze (per IP), limit rozmiaru body
@@ -56,7 +56,7 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 ### Etap 5 — Jakość AI: ewaluacja (≈2 h)
 - [x] `eval/` — golden expectations dla test PDF (strony, typ, kwoty 184 500 PLN / 8 600 EUR / 890 USD, strony umowy, osoby, daty ISO, brak „1 PLN”)
 - [x] Skrypt `npm run eval` — woła worker, porównuje, wypisuje wynik punktowy
-- [x] Iteracje promptu z wersjonowaniem (`worker/src/prompt.ts`, changelog w AI_LOG)
+- [x] Iteracje promptu z wersjonowaniem (`worker/src/ai/prompt.ts`, changelog w AI_LOG)
 
 ### Etap 6 — UX i dostępność (≈2 h)
 - [x] Responsywność od 360 px, focus states, obsługa klawiaturą, kontrast WCAG AA (Etapy 2–4)
@@ -67,10 +67,10 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 - [ ] (COULD, po oddaniu) Interfejs po angielsku — brief wymaga komunikatów po polsku, więc PL zostaje domyślny
 
 ### Etap 7 — Dokumentacja i oddanie (≈2 h)
-- [ ] README: demo, zrzut ekranu, architektura (diagram), decyzje, uruchomienie lokalne, env, ograniczenia
-- [ ] AI_LOG.md finalny
-- [ ] Końcowy przegląd: code review agentem, security review, test na czystej przeglądarce/mobile
-- [ ] Wysłanie linków
+- [x] README: demo, zrzut ekranu, architektura (diagram), decyzje, uruchomienie lokalne, env, ograniczenia
+- [x] AI_LOG.md finalny
+- [x] Końcowy przegląd: code review agentem, security review, test na czystej przeglądarce/mobile
+- [x] Wysłanie linków
 
 ## Praca z agentami
 - Równoległe ścieżki (subagenci, osobne worktree): **A** frontend UI · **B** worker + prompt · **C** schemat + testy + eval.

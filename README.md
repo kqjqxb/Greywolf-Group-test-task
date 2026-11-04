@@ -30,7 +30,7 @@ Aplikacja webowa, która wczytuje plik PDF, tworzy krótkie podsumowanie i zamie
 | F-05 | Widok i eksport | karty wyników, formatowanie pl-PL, podgląd JSON, pobranie i kopiowanie `.json` |
 | F-06 | Stany UI | pusty, odczyt / OCR / analiza (z licznikiem sekund), błąd z „Spróbuj ponownie”, wszystkie ogłaszane przez `aria-live` |
 | F-07 | Publiczne demo | GitHub Pages, deploy przez GitHub Actions |
-| F-08 | Długie dokumenty | powyżej 150 tys. znaków: podział po znacznikach stron, analiza fragmentów równolegle, deterministyczne scalenie i deduplikacja |
+| F-08 | Długie dokumenty | powyżej 150 tys. znaków: podział po znacznikach stron (maks. 3 fragmenty / 300 tys. znaków), analiza fragmentów równolegle, deterministyczne scalenie i deduplikacja, końcowe podsumowanie z podsumowań fragmentów |
 | F-09 | Historia | ostatnie 10 analiz w `localStorage`, walidowane Zodem przy odczycie; wynik przetrwa odświeżenie strony |
 | F-10 | OCR | tesseract.js (pol + eng) tylko dla stron bez warstwy tekstowej, ładowany leniwie, pliki hostowane lokalnie |
 
@@ -48,7 +48,7 @@ flowchart LR
     R --> V[Walidacja Zod → widok, JSON, historia]
   end
   subgraph Worker["Cloudflare Worker (API proxy)"]
-    C[CORS allowlist<br/>rate limit 10/min/IP<br/>limit 2 MB] --> K{Cache KV<br/>SHA-256 tekstu}
+    C[CORS allowlist<br/>rate limit 10/min/IP<br/>limit 1 MB] --> K{Cache KV<br/>SHA-256 tekstu}
     K -->|trafienie| OUT[wynik]
     K -->|brak| B[Dzienny budżet Claude]
     B --> L[Łańcuch modeli<br/>wspólny deadline 26 s]
@@ -73,14 +73,16 @@ flowchart LR
 | **Ochrona budżetu** w 3 warstwach | kredyt *prepaid* (twardy limit), dzienny licznik wywołań Claude w KV (150/dzień, potem Gemini), cache wyników |
 | **Cache wyników** (KV, 14 dni) | ten sam dokument nie jest analizowany dwa razy: powtórka trwa ~0,1 s i kosztuje 0. Przechowywany jest wynik, nie tekst dokumentu. |
 | **Jeden schemat Zod** | kontrakt front ↔ worker ↔ model w jednym miejscu; z niego powstaje JSON Schema dla *structured output* obu dostawców |
-| **Wspólny deadline 26 s** | fallback i ponowna próba zaczynają się tylko, gdy zostało ≥ 8 s, więc całość mieści się w 30 s z Definition of Done |
+| **Wspólny deadline 26 s** na część AI | fallback i ponowna próba zaczynają się tylko, gdy zostało ≥ 8 s. Zmierzony czas całego przepływu dla testowej umowy (odczyt + OCR str. 11 + AI): **15–18 s**; OCR jednej strony ≈ 1–2 s |
+| **Daty `YYYY-MM`** (rozszerzenie kontraktu) | `document.date` i `dates[].date` przyjmują `YYYY-MM-DD` albo `YYYY-MM` — oba to ISO 8601 (`YYYY-MM` = zmniejszona precyzja). Gdy dokument podaje tylko miesiąc i rok (np. „10/2026” w CV), model nie zgaduje dnia (zasada „Model nie zgaduje”). Bez tego okresy pracy w CV znikały z wyniku. |
+| **Brak dzielenia test PDF na fragmenty** | 12 stron to ≈ 35 tys. znaków — mieści się w kontekście modelu z dużym zapasem. Jedno wywołanie jest szybsze, tańsze i daje spójny wynik (bez scalania). Dzielenie (F-08) włącza się od 150 tys. znaków; logika podziału i scalania jest pokryta testami jednostkowymi. |
 | **OCR w przeglądarce** | test PDF zawiera skan aneksu (str. 11), który zmienia kluczowe warunki (120 → 135 użytkowników, abonament 13 100 zł). Bez OCR wynik byłby nieaktualny. |
 | **Brak routera** | jeden widok; brak problemów z routingiem na GitHub Pages |
 
 ## Bezpieczeństwo
 - Klucze API nigdy we froncie ani w historii Git (historia sprawdzona: 0 trafień); `.env` i `.dev.vars` w `.gitignore`, w repo tylko `*.example`.
 - **CORS**: dokładne dopasowanie origin `https://kqjqxb.github.io`, 403 dla innych (także dla zapytań bez nagłówka `Origin`).
-- **Limity**: 10 zapytań / 60 s na IP (Workers Rate Limiting), body ≤ 2 MB sprawdzane w nagłówku i w faktycznie odczytanych bajtach, plik ≤ 10 MB w przeglądarce.
+- **Limity**: 10 zapytań / 60 s na IP (Workers Rate Limiting), body ≤ 1 MB sprawdzane w nagłówku i w faktycznie odczytanych bajtach, tekst ≤ 300 tys. znaków (maks. 3 fragmenty), plik ≤ 10 MB w przeglądarce. Dzienny budżet Claude jest sprawdzany na **najgorszy przypadek całego zapytania** (wszystkie fragmenty + ponowne próby), więc pojedyncze zapytanie nie przekroczy limitu.
 - **Prompt injection**: tekst PDF to dane: jest w delimiterach (neutralizowanych w treści), instrukcja systemowa każe ignorować polecenia z dokumentu, a wynik musi przejść walidację schematu. Test PDF zawiera taką próbę na str. 4 i jest ona ignorowana (sprawdza to eval). UI informuje, że wykryto tekst wyglądający na polecenia dla AI.
 - **Nagłówki**: `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`; strona ma **Content-Security-Policy** (bez `unsafe-eval` i skryptów inline; Zod w trybie *jitless*).
 - Brak `dangerouslySetInnerHTML`; JSON renderowany jako tekst. Błędy API zwracają tylko kod (bez treści wejścia i komunikatów dostawcy).
@@ -89,7 +91,7 @@ flowchart LR
 ## Jakość wyników AI: ewaluacja
 `npm run eval -- <ścieżka.pdf> [--url <worker>]` wyciąga tekst tak jak frontend, woła worker i sprawdza fakty z oczekiwań (typ, język, data, strony, kwoty w 3 walutach, strony umowy, osoby, daty ISO bez duplikatów, 3–5 zdań, brak efektów *prompt injection*); przyjmuje PDF albo fikstury `.txt`.
 
-Dwa zestawy kontroli: polska umowa testowa (**18/18**) i fikcyjne angielskie CV w `eval/fixtures/` (**17/17**: język wartości, daty `YYYY-MM`, wspólne daty, brak produktów wśród organizacji), `claude-haiku-5-5`, prompt 1.2.0. Historia zmian promptu jest w [AI_LOG.md](AI_LOG.md).
+Dwa zestawy kontroli: polska umowa testowa (**18/18**) i fikcyjne angielskie CV w `eval/fixtures/` (**17/17**: język wartości, daty `YYYY-MM`, wspólne daty, brak produktów wśród organizacji), `claude-haiku-5-5`, prompt 1.2.0. Wyniki przebiegów i ręczna weryfikacja aneksu (OCR): [eval/results/2026-11-05.md](eval/results/2026-11-05.md). Historia zmian promptu: [AI_LOG.md](AI_LOG.md).
 
 ## Uruchomienie lokalne
 Wymagania: Node 22, konto Cloudflare (dla workera), klucz Anthropic i/lub Gemini.
@@ -119,7 +121,7 @@ npm run worker:dev              # http://localhost:8787
 | worker (bindingi) | `PDF_INSIGHT_KV`, `ANALYZE_RATE_LIMITER` | cache + licznik budżetu, rate limit |
 
 ### Skrypty
-`lint` · `typecheck` (app, config, worker, eval) · `test` (Vitest, 348 testów) · `build` · `format:check` · `worker:dev` · `worker:deploy` · `eval`
+`lint` · `typecheck` (app, config, worker, eval) · `test` (Vitest, 361 testów) · `build` · `format:check` · `worker:dev` · `worker:deploy` · `eval`
 
 CI (`.github/workflows/deploy.yml`): lint › typecheck › test › build › deploy na GitHub Pages. Worker deployowany ręcznie (`npm run worker:deploy`).
 
@@ -127,7 +129,8 @@ CI (`.github/workflows/deploy.yml`): lint › typecheck › test › build › d
 - **Limity**: dzienny limit Claude (150 wywołań) i darmowe limity Gemini (20/dzień/model) są wspólne dla wszystkich użytkowników demo. Po ich wyczerpaniu pojawi się komunikat o limicie. Liczniki KV są *eventually consistent*, więc limit jest przybliżony.
 - **Rate limit per IP** liczony jest w lokalizacji Cloudflare (przybliżony); sprawdzanie `Origin` nie jest uwierzytelnianiem: chroni przed użyciem z innych stron, nie przed skryptem.
 - **OCR**: jakość zależy od skanu; maks. 5 stron OCR na dokument; wymaga przeglądarki z WebAssembly SIMD; język danych OCR: polski i angielski. Eval nie wykonuje OCR, więc 2 kontrole aneksu (str. 11) są w nim pomijane.
-- **Długie dokumenty** (> 150 tys. znaków): przetestowane jednostkowo; bardzo duże pliki mogą nie zmieścić się w 30 s lub trafić na limity dostawcy.
+- **Długie dokumenty** (150–300 tys. znaków): dzielenie przetestowane jednostkowo, bez testu na żywo; mogą przekroczyć 30 s. Powyżej 300 tys. znaków — komunikat „Dokument jest zbyt długi”.
+- **Liczenie zdań** (reguła 3–5 zdań) działa dla alfabetów z wielkimi literami oraz CJK / arabskiego / hebrajskiego / dewanagari; dla tajskiego (zdania rozdziela tylko spacja) podsumowanie może zostać odrzucone.
 - **Cache** przechowuje wyniki (nie dokumenty) przez 14 dni; ten sam tekst = ten sam wynik do zmiany wersji promptu.
 - **Prywatność**: tekst trafia do Anthropic, a awaryjnie do Google (w darmowym planie Google może używać danych do ulepszania modeli). Nie należy wgrywać poufnych dokumentów.
 - Interfejs tylko po polsku (zgodnie z briefem); angielska wersja zaplanowana jako opcjonalna.
