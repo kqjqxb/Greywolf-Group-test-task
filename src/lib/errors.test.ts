@@ -21,7 +21,10 @@ describe('errorMessage', () => {
 
   it('mentions the limits in size messages', () => {
     expect(errorMessage('file_too_large')).toContain('10 MB');
-    expect(errorMessage('payload_too_large')).toContain('2 MB');
+    expect(errorMessage('payload_too_large')).toBe(
+      'Dokument jest zbyt długi do analizy (maks. ok. 300 tys. znaków).',
+    );
+    expect(errorMessage('text_too_large')).toBe(errorMessage('payload_too_large'));
   });
 });
 

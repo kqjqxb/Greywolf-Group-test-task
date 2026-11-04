@@ -1,5 +1,5 @@
 import { AppError } from './errors';
-import { MAX_REQUEST_BODY_BYTES } from './limits';
+import { MAX_DOCUMENT_CHARS, MAX_REQUEST_BODY_BYTES } from './limits';
 import { buildDocumentText } from './pdfText';
 import type { AnalyzeRequest } from './schema';
 
@@ -8,8 +8,8 @@ const MAX_FILE_NAME_LENGTH = 255;
 
 /**
  * Builds the `POST /analyze` body from extracted pages.
- * Throws AppError('text_too_large') when the body would exceed the worker's limit,
- * so the user gets a clear message instead of a rejected request.
+ * Throws AppError('text_too_large') when the text or the body would exceed the worker's limits,
+ * so the user gets a clear message without a request.
  */
 export function buildAnalyzeRequest(
   fileName: string,
@@ -21,7 +21,7 @@ export function buildAnalyzeRequest(
     text: buildDocumentText(pageTexts),
   };
   const bodyBytes = new TextEncoder().encode(JSON.stringify(request)).length;
-  if (bodyBytes > MAX_REQUEST_BODY_BYTES) {
+  if (request.text.length > MAX_DOCUMENT_CHARS || bodyBytes > MAX_REQUEST_BODY_BYTES) {
     throw new AppError('text_too_large');
   }
   return request;

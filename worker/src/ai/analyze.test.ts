@@ -9,8 +9,13 @@ import {
   validModelAnswer,
   type ScriptedCall,
 } from '../testing/fakeProvider';
-import { analyzeDocument, validateModelOutput, validateSummaryOutput } from './analyze';
-import { CHUNK_MAX_CHARS, CHUNKING_THRESHOLD_CHARS } from './chunking';
+import {
+  analyzeDocument,
+  maxClaudeCalls,
+  validateModelOutput,
+  validateSummaryOutput,
+} from './analyze';
+import { CHUNK_MAX_CHARS, CHUNKING_THRESHOLD_CHARS, MAX_KEYWORDS } from './chunking';
 import { PROMPT_VERSION, SUMMARY_SYSTEM_INSTRUCTION } from './prompt';
 
 const REQUEST: AnalyzeRequest = { fileName: 'umowa-14.pdf', pages: 12, text: 'Treść umowy.' };
@@ -94,6 +99,27 @@ describe('validateModelOutput', () => {
       expect(validation.value.keywords).toEqual(['SLA', 'wdrożenie']);
     }
   });
+
+  it('trims keywords to MAX_KEYWORDS after dedupe instead of rejecting the answer', () => {
+    const keywords = Array.from({ length: 14 }, (_, i) => `słowo ${i + 1}`);
+    const validation = validateModelOutput(
+      answerWith({ keywords: ['SLA', 'sla', ...keywords] }),
+      REQUEST,
+    );
+    expect(validation.ok).toBe(true);
+    if (validation.ok) {
+      expect(validation.value.keywords).toHaveLength(MAX_KEYWORDS);
+      expect(validation.value.keywords).toEqual(['SLA', ...keywords.slice(0, MAX_KEYWORDS - 1)]);
+    }
+  });
+});
+
+describe('maxClaudeCalls', () => {
+  it('counts first call + retry for every task, including the summary of a chunked document', () => {
+    expect(maxClaudeCalls(1)).toBe(2);
+    expect(maxClaudeCalls(2)).toBe(6);
+    expect(maxClaudeCalls(3)).toBe(8);
+  });
 });
 
 describe('validateSummaryOutput', () => {
@@ -104,6 +130,14 @@ describe('validateSummaryOutput', () => {
     });
     expect(validateSummaryOutput('{"summary": "Raz."}').ok).toBe(false);
     expect(validateSummaryOutput('nie json').ok).toBe(false);
+  });
+
+  it('accepts a 3-sentence summary in a script without capitals', () => {
+    const summary = '本合同由两家公司签订。合同金额为十万元。合同有效期为两年。';
+    expect(validateSummaryOutput(JSON.stringify({ summary }))).toEqual({
+      ok: true,
+      value: summary,
+    });
   });
 });
 
@@ -186,7 +220,7 @@ describe('analyzeDocument — long documents (F-08)', () => {
     expect(claude.calls[2]?.output).toBe('summary');
   });
 
-  it('keeps the first chunk summary when the summary call fails', async () => {
+  it('fails the request when the summary call fails (no partial summary)', async () => {
     const clock = fakeClock();
     const claude = scriptedProvider(
       'claude',
@@ -201,10 +235,49 @@ describe('analyzeDocument — long documents (F-08)', () => {
       { providers: [claude.provider], now: clock.now },
     );
 
-    expect(outcome.ok).toBe(true);
-    if (outcome.ok) {
-      expect(outcome.result.summary).toBe(sampleResult.summary);
-    }
+    expect(outcome).toMatchObject({ ok: false, error: 'ai_unavailable', stats: { paidCalls: 3 } });
+  });
+
+  it('fails with ai_invalid_response when the summary stays invalid after the retry', async () => {
+    const clock = fakeClock();
+    const oneSentence: ScriptedCall = {
+      ms: 1_000,
+      result: { ok: true, text: '{"summary": "Tylko jedno zdanie."}' },
+    };
+    const claude = scriptedProvider(
+      'claude',
+      [okAnswer(), okAnswer(), oneSentence, oneSentence],
+      clock,
+      [],
+      true,
+    );
+
+    const outcome = await analyzeDocument(
+      { ...REQUEST, text: longDocument(4) },
+      { providers: [claude.provider], now: clock.now },
+    );
+
+    expect(outcome).toMatchObject({ ok: false, error: 'ai_invalid_response' });
+  });
+
+  it('fails with ai_timeout when no time is left for the summary call', async () => {
+    const clock = fakeClock();
+    // Both chunks run in parallel on the fake clock, so their durations add up: 2 × 11.5 s = 23 s, 3 s left.
+    const claude = scriptedProvider(
+      'claude',
+      [okAnswer(11_500), okAnswer(11_500)],
+      clock,
+      [],
+      true,
+    );
+
+    const outcome = await analyzeDocument(
+      { ...REQUEST, text: longDocument(4) },
+      { providers: [claude.provider], now: clock.now },
+    );
+
+    expect(outcome).toMatchObject({ ok: false, error: 'ai_timeout' });
+    expect(claude.calls).toHaveLength(2);
   });
 
   it('fails the request when any chunk fails', async () => {

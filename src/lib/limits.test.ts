@@ -1,14 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isWithinSizeLimit, MAX_FILE_SIZE_BYTES } from './limits';
+import { MAX_DOCUMENT_CHARS, MAX_REQUEST_BODY_BYTES } from './limits';
 
-// Placeholder test for the setup stage; schema tests will replace it.
-describe('isWithinSizeLimit', () => {
-  it('accepts a file at exactly the limit', () => {
-    expect(isWithinSizeLimit(MAX_FILE_SIZE_BYTES)).toBe(true);
-  });
-
-  it('rejects empty and oversized files', () => {
-    expect(isWithinSizeLimit(0)).toBe(false);
-    expect(isWithinSizeLimit(MAX_FILE_SIZE_BYTES + 1)).toBe(false);
+describe('limits', () => {
+  it('fits a document at the character limit into the body limit, even in a CJK script', () => {
+    // 3 bytes per character in UTF-8 is the worst case for ordinary text (CJK); 1 KB for metadata.
+    expect(MAX_DOCUMENT_CHARS * 3 + 1024).toBeLessThanOrEqual(MAX_REQUEST_BODY_BYTES);
   });
 });
