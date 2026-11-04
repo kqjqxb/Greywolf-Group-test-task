@@ -4,6 +4,13 @@
  *
  * Rule: a sentence ends at `.`, `!`, `?` or `…` followed by whitespace and an uppercase letter
  * (optionally after an opening quote), or at the end of the text.
+ *
+ * Scripts without letter case (Arabic, Hebrew, Devanagari, …) cannot use the uppercase signal, so
+ * there a terminator followed by whitespace and a caseless letter (`\p{Lo}`) is a boundary; the
+ * Arabic question mark `؟`, Urdu full stop `۔` and Devanagari danda `।` `॥` count as terminators.
+ * Chinese and Japanese write no spaces between sentences, so the full-width `。` `！` `？` (and the
+ * half-width `｡`) end a sentence before any following character. Thai marks sentence ends only with
+ * a space, which is indistinguishable from a phrase break, so Thai is not split.
  *  - An opening bracket after a dot does not start a sentence: "sp. z o.o. (Zamawiający)" and
  *    "S.A. (Wykonawca)" are role labels inside a sentence, which is how models describe parties.
  *  - Decimals ("184.500,00", "3.5") never split, because no whitespace follows the dot.
@@ -60,8 +67,16 @@ const PREFIX_ABBREVIATIONS = new Set([
   'vs',
 ]);
 
-/** Candidate boundary: terminal punctuation, optional closing quotes/brackets, whitespace, then an uppercase letter (optionally after an opening quote). */
-const BOUNDARY = /([.!?…]+)["'”»)\]]*\s+(?=["'„«“]*\p{Lu})/gu;
+/**
+ * Candidate boundary, two alternatives:
+ * 1. terminal punctuation, optional closing quotes/brackets, whitespace, then an uppercase or
+ *    caseless letter (optionally after an opening quote);
+ * 2. CJK full-width terminator, optional closing brackets/quotes, then any non-space character
+ *    (whitespace in between is optional).
+ * The end of the text is not a boundary: the last sentence is counted without one.
+ */
+const BOUNDARY =
+  /([.!?…؟۔।॥]+)["'”»)\]」』）]*\s+(?=["'„«“「『（]*[\p{Lu}\p{Lo}])|([。！？｡]+)["'”»)\]」』）]*\s*(?=\S)/gu;
 
 /** True when the dot at the end of `textBefore` belongs to an abbreviation or an initial. */
 function endsWithNonTerminalDot(textBefore: string): boolean {
@@ -83,7 +98,7 @@ export function countSentences(text: string): number {
 
   let count = 1; // the last sentence does not need a following boundary
   for (const match of trimmed.matchAll(BOUNDARY)) {
-    const punctuation = match[1] ?? '';
+    const punctuation = match[1] ?? match[2] ?? '';
     const textBefore = trimmed.slice(0, match.index);
     if (punctuation === '.' && endsWithNonTerminalDot(textBefore)) {
       continue;
