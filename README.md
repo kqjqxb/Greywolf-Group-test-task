@@ -88,7 +88,7 @@ flowchart LR
 ## Jakość wyników AI: ewaluacja
 `npm run eval -- <ścieżka.pdf> [--url <worker>]` wyciąga tekst tak jak frontend, woła worker i sprawdza 17 faktów (typ, język, data, strony, kwoty w 3 walutach, strony umowy, osoby, daty ISO bez duplikatów, 3–5 zdań, brak efektów *prompt injection*).
 
-Wynik na produkcji dla testowej umowy: **17/17 (100%)**, `claude-haiku-5-5`, prompt 1.1.0. Historia zmian promptu jest w [AI_LOG.md](AI_LOG.md).
+Dwa zestawy kontroli: polska umowa testowa (**18/18**) i fikcyjne angielskie CV w `eval/fixtures/` (**17/17**: język wartości, daty `YYYY-MM`, wspólne daty, brak produktów wśród organizacji), `claude-haiku-5-5`, prompt 1.2.0. Historia zmian promptu jest w [AI_LOG.md](AI_LOG.md).
 
 ## Uruchomienie lokalne
 Wymagania: Node 22, konto Cloudflare (dla workera), klucz Anthropic i/lub Gemini.
@@ -118,7 +118,7 @@ npm run worker:dev              # http://localhost:8787
 | worker (bindingi) | `PDF_INSIGHT_KV`, `ANALYZE_RATE_LIMITER` | cache + licznik budżetu, rate limit |
 
 ### Skrypty
-`lint` · `typecheck` (app, config, worker, eval) · `test` (Vitest, 325 testów) · `build` · `format:check` · `worker:dev` · `worker:deploy` · `eval`
+`lint` · `typecheck` (app, config, worker, eval) · `test` (Vitest, 348 testów) · `build` · `format:check` · `worker:dev` · `worker:deploy` · `eval`
 
 CI (`.github/workflows/deploy.yml`): lint › typecheck › test › build › deploy na GitHub Pages. Worker deployowany ręcznie (`npm run worker:deploy`).
 

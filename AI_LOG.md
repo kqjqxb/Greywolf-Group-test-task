@@ -48,6 +48,7 @@ Trzy warstwy ochrony budżetu: kredyt prepaid (twardy limit), dzienny licznik wy
 |---|---|---|
 | 1.0.0 | system prompt z regułami bezpieczeństwa, dokument w delimiterach, structured output | Etap 2 |
 | 1.1.0 | jedna pozycja na datę (scalone konteksty), pełna lista kwot, aneksy aktualizują wartości w podsumowaniu | ręczny review wyniku na demo: 28 dat z duplikatami, brak części kwot |
+| 1.2.0 | wszystkie wartości tekstowe w języku dokumentu (neutralne przykłady), `YYYY-MM` dla dat miesiąc+rok (bez zmyślonego dnia), każde zdarzenie w dacie wspólnej, produkty/platformy to nie organizacje, bez „wypełniaczy” o brakach w podsumowaniu | mój test na prawdziwym angielskim CV: konteksty dat po polsku, zgubione „10/2026”, utracone zdarzenie we wspólnej dacie, „App Store”/„Google Play” jako organizacje |
 
 ## Błędy AI i poprawki
 | # | Co AI zrobiło źle | Jak wykryto | Poprawka |
@@ -76,6 +77,9 @@ Trzy warstwy ochrony budżetu: kredyt prepaid (twardy limit), dzienny licznik wy
 | 22 | Druk: szklany nagłówek zostawał szary (trwająca animacja), ikony w kolorze | podgląd wydruku | wyłączone przejścia w `@media print`, wszystko czarne |
 | 23 | Kolejność reguł CSS: `.entity-list--people { display: grid }` przed `.entity-list { display: flex }` — późniejsza reguła wygrywała | wysokość karty „Podmioty” się nie zmieniła (482 px) | przeniesienie reguły; pomiar zamiast oceny „na oko” |
 | 24 | Breakpoint oparty o szerokość okna nie widział, że oś czasu w połówce karty jest za wąska (konteksty w 3–4 liniach) | zrzuty na 900 px | container query na samej osi czasu |
+| 25 | Prompt 1.1.0: wszystkie przykłady po polsku → dla angielskiego CV konteksty dat wyszły po polsku (łamie regułę „wartości w języku dokumentu”); reguła „pomijaj daty bez dnia” gubiła okresy pracy „10/2026” | ręczny test na prawdziwym CV, nie na pliku testowym | prompt 1.2.0 + zmiana kontraktu (ISO 8601 `YYYY-MM`) + drugi dokument w eval (angielski) — wcześniej jakość mierzyłem tylko na jednym polskim pliku |
+| 26 | Deduplikacja dat mogła powtórzyć zdarzenie („a; b; b”), gdy model sam już scalił konteksty | test jednostkowy | podział po „;” przed deduplikacją |
+| 27 | Agent uczciwie zgłosił, że jego syntetyczna fikstura odtworzyła tylko 2 z 5 defektów | raport | finalna weryfikacja na prawdziwym CV na produkcji; wniosek: syntetyczne fikstury ≠ realne dokumenty |
 
 ## Wnioski
 - **Kontekst w repo > pamięć czatu.** Każdy wykonawca startował bez historii i dostawał to samo: `CLAUDE.md` (twarde reguły), `docs/BRIEF.md` (specyfikacja + pułapki test PDF), `PLAN.md` (stan). Dzięki temu żadna z sesji wykonawców nie „rozjechała się” z wymaganiami, mimo że nie znały poprzednich rozmów.
