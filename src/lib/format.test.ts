@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   formatAmount,
   formatDate,
+  formatDateTime,
+  formatDuration,
   formatDocumentType,
   formatLanguage,
   formatPageCount,
@@ -69,5 +71,20 @@ describe('formatPageCount', () => {
     [25, '25 stron'],
   ])('%i → %s', (pages, expected) => {
     expect(formatPageCount(pages)).toBe(expected);
+  });
+});
+
+describe('formatDuration', () => {
+  it('shows seconds with one decimal and "< 1 s" for fast (cached) results', () => {
+    expect(formatDuration(4230)).toBe('4,2 s');
+    expect(formatDuration(12000)).toBe('12 s');
+    expect(formatDuration(3)).toBe('< 1 s');
+  });
+});
+
+describe('formatDateTime', () => {
+  it('formats a valid date-time and returns the input when invalid', () => {
+    expect(formatDateTime('2026-11-04T12:30:00.000Z')).toMatch(/2026/);
+    expect(formatDateTime('wczoraj')).toBe('wczoraj');
   });
 });

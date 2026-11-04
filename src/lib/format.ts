@@ -64,3 +64,20 @@ export function formatPageCount(pages: number): string {
   }
   return `${pages} stron`;
 }
+
+/** "2026-11-04T12:30:00Z" → "4 lis 2026, 13:30" in the user's time zone. */
+export function formatDateTime(isoDateTime: string): string {
+  const date = new Date(isoDateTime);
+  if (Number.isNaN(date.getTime())) {
+    return isoDateTime;
+  }
+  return new Intl.DateTimeFormat(LOCALE, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+/** 4230 → "4,2 s"; below 1 s → "< 1 s" (e.g. a cached result). */
+export function formatDuration(ms: number): string {
+  if (ms < 1000) {
+    return '< 1 s';
+  }
+  return `${new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 }).format(ms / 1000)} s`;
+}

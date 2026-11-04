@@ -25,7 +25,8 @@ export function JsonPanel({ result, pdfFileName }: JsonPanelProps) {
   }
 
   return (
-    <section className="card" aria-labelledby="json-title">
+    // Not printed: buttons and a JSON dump are useless on paper.
+    <section className="card no-print" aria-labelledby="json-title">
       <h2 id="json-title" className="card__title">
         Wynik w formacie JSON
       </h2>

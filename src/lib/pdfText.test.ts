@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildDocumentText, findEmptyPages, joinTextItems } from './pdfText';
+import {
+  buildDocumentText,
+  findEmptyPages,
+  joinTextItems,
+  MAX_OCR_PAGES,
+  normaliseText,
+  planOcr,
+} from './pdfText';
 
 /** A pdf.js-like text item at (x, y) with the given width and font size. */
 function piece(str: string, x: number, y: number, width: number, fontSize = 10, hasEOL = false) {
@@ -90,6 +97,23 @@ describe('buildDocumentText', () => {
   it('adds page markers and skips empty pages', () => {
     expect(buildDocumentText(['Tekst 1', '', 'Tekst 3'])).toBe(
       '--- Strona 1 ---\nTekst 1\n\n--- Strona 3 ---\nTekst 3',
+    );
+  });
+});
+
+describe('planOcr', () => {
+  it('OCRs up to MAX_OCR_PAGES pages and skips the rest', () => {
+    expect(MAX_OCR_PAGES).toBe(5);
+    expect(planOcr([11])).toEqual({ ocr: [11], skipped: [] });
+    expect(planOcr([1, 2, 3, 4, 5, 6, 7])).toEqual({ ocr: [1, 2, 3, 4, 5], skipped: [6, 7] });
+    expect(planOcr([])).toEqual({ ocr: [], skipped: [] });
+  });
+});
+
+describe('normaliseText', () => {
+  it('cleans OCR output: single spaces, trimmed lines, at most one empty line', () => {
+    expect(normaliseText('  Aneks  nr 1 \n\n\n\nLiczba   użytkowników: 135\n  ')).toBe(
+      'Aneks nr 1\n\nLiczba użytkowników: 135',
     );
   });
 });

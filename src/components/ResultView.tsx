@@ -2,21 +2,19 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import {
   formatAmount,
   formatDate,
+  formatDateTime,
   formatDocumentType,
+  formatDuration,
   formatLanguage,
   formatPageCount,
 } from '../lib/format';
-import type { ExtractionFindings } from '../lib/analysisState';
-import type { AnalysisResult } from '../lib/schema';
-import { EmptyPagesWarning } from './EmptyPagesWarning';
-import { InjectionNotice } from './InjectionNotice';
+import type { CompletedAnalysis } from '../lib/analysisState';
+import type { AnalyzeMeta } from '../lib/schema';
+import { ExtractionNotices } from './ExtractionNotices';
 import { JsonPanel } from './JsonPanel';
 
 interface ResultViewProps {
-  result: AnalysisResult;
-  /** Name of the uploaded file (used for the JSON file name). */
-  pdfFileName: string;
-  findings: ExtractionFindings;
+  analysis: CompletedAnalysis;
   onNewFile: () => void;
 }
 
@@ -45,9 +43,23 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-/** F-05: readable results. All values are rendered as text nodes (escaped by React). */
-export function ResultView({ result, pdfFileName, findings, onNewFile }: ResultViewProps) {
+/** How the result was produced, e.g. "Model: claude-haiku-5-5 · z pamięci podręcznej · 0,4 s". */
+function MetaLine({ meta }: { meta: AnalyzeMeta }) {
+  const parts = [`Model: ${meta.model}`];
+  if (meta.cached === true) {
+    parts.push('z pamięci podręcznej');
+  }
+  parts.push(`czas analizy: ${formatDuration(meta.durationMs)}`);
+  return <p className="result-meta">{parts.join(' · ')}</p>;
+}
+
+/**
+ * F-05: readable results. All values are rendered as text nodes (escaped by React).
+ * Elements marked `no-print` are hidden when the page is printed or saved as PDF.
+ */
+export function ResultView({ analysis, onNewFile }: ResultViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const { result, findings, meta } = analysis;
   const { document: doc } = result;
 
   // Move focus to the results so screen reader users hear that the analysis is done.
@@ -61,13 +73,16 @@ export function ResultView({ result, pdfFileName, findings, onNewFile }: ResultV
         <h2 ref={headingRef} tabIndex={-1} className="results__title">
           Wynik analizy
         </h2>
-        <button type="button" className="button button--secondary" onClick={onNewFile}>
+        <button type="button" className="button button--secondary no-print" onClick={onNewFile}>
           Analizuj inny plik
         </button>
       </div>
+      <p className="print-only">
+        Plik: {analysis.fileName} · Data analizy:{' '}
+        <time dateTime={analysis.analyzedAt}>{formatDateTime(analysis.analyzedAt)}</time>
+      </p>
 
-      <EmptyPagesWarning pages={findings.emptyPages} />
-      {findings.injectionSuspected && <InjectionNotice />}
+      <ExtractionNotices findings={findings} />
 
       <section className="card" aria-labelledby="doc-title">
         <p className="eyebrow">{formatDocumentType(doc.type)}</p>
@@ -153,7 +168,9 @@ export function ResultView({ result, pdfFileName, findings, onNewFile }: ResultV
         )}
       </Section>
 
-      <JsonPanel result={result} pdfFileName={pdfFileName} />
+      <JsonPanel result={result} pdfFileName={analysis.fileName} />
+
+      {meta && <MetaLine meta={meta} />}
     </div>
   );
 }

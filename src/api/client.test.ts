@@ -24,13 +24,19 @@ afterEach(() => {
 describe('analyze', () => {
   it('returns the validated result', async () => {
     mockFetchResponse({ result: sampleResult });
-    await expect(analyze(request)).resolves.toEqual(sampleResult);
+    await expect(analyze(request)).resolves.toEqual({ result: sampleResult });
   });
 
-  it('accepts the optional meta and returns only the result', async () => {
-    const meta = { model: 'gemini-3.6-flash', promptVersion: '1.0.0', durationMs: 9000 };
+  it('returns the optional meta next to the result', async () => {
+    const meta = {
+      model: 'claude-haiku-5-5',
+      promptVersion: '1.0.0',
+      durationMs: 9000,
+      cached: true,
+      chunks: 1,
+    };
     mockFetchResponse({ result: sampleResult, meta });
-    await expect(analyze(request)).resolves.toEqual(sampleResult);
+    await expect(analyze(request)).resolves.toEqual({ result: sampleResult, meta });
   });
 
   it('waits longer than the worker budget (26 s) by default', () => {

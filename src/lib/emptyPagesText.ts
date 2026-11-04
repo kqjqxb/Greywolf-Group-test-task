@@ -27,3 +27,26 @@ export function emptyPagesText(pages: readonly number[]): EmptyPagesText | null 
     detail: `(prawdopodobnie to skany). Ich ${consequence}`,
   };
 }
+
+/**
+ * Polish text of the "pages read with OCR" notice, singular and plural:
+ * - "Strona 11 była skanem — tekst rozpoznano automatycznie (OCR), może zawierać błędy."
+ * - "Strony 3, 7 były skanami — tekst rozpoznano automatycznie (OCR), może zawierać błędy."
+ * Returns null when no page was read with OCR.
+ */
+export function ocrPagesText(pages: readonly number[]): EmptyPagesText | null {
+  if (pages.length === 0) {
+    return null;
+  }
+  const list = pages.join(', ');
+  const detail = '— tekst rozpoznano automatycznie (OCR), może zawierać błędy.';
+  if (pages.length === 1) {
+    return { lead: `Strona ${list} była skanem`, detail };
+  }
+  return { lead: `Strony ${list} były skanami`, detail };
+}
+
+/** Added to the empty pages warning when some scanned pages were over the OCR limit. */
+export function ocrLimitText(maxPages: number): string {
+  return `Automatyczne rozpoznawanie tekstu (OCR) obejmuje maksymalnie ${maxPages} stron.`;
+}
