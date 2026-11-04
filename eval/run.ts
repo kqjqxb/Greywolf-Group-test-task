@@ -1,10 +1,12 @@
 import { AnalyzeResponseSchema, ApiErrorSchema, type AnalyzeRequest } from '../src/lib/schema';
-import { CHECKS } from './expectations';
-import { extractPdf } from './extract';
+import { isSuiteName, SUITES, type SuiteName } from './expectations';
+import { extractPdf, type ExtractedDocument } from './extract';
+import { loadTextFixture } from './fixture';
 
 /**
- * Eval CLI: `npm run eval -- <path-to-pdf> [--url <worker-url>] [--origin <origin>]`
- * Extracts the PDF text like the frontend, calls POST /analyze, prints a pass/fail table,
+ * Eval CLI: `npm run eval -- <path-to-pdf-or-txt> [--suite <name>] [--url <worker-url>] [--origin <origin>]`
+ * Extracts the PDF text like the frontend (or reads a .txt fixture, see fixture.ts), calls
+ * POST /analyze, checks the result against an expectation suite, prints a pass/fail table,
  * the score, model, latency and Claude cost, and exits with 1 when a check fails.
  * Every run that misses the cache spends real API quota.
  */
@@ -17,8 +19,14 @@ const PROD_ORIGIN = 'https://kqjqxb.github.io';
 const HAIKU_INPUT_USD_PER_MTOK = 0.1;
 const HAIKU_OUTPUT_USD_PER_MTOK = 0.5;
 
+const USAGE =
+  'Usage: npm run eval -- <path-to-pdf-or-txt> [--suite <name>] [--url <worker-url>] [--origin <origin>]';
+/** A PDF without --suite is the Polish test contract (docs/BRIEF.md). */
+const DEFAULT_PDF_SUITE: SuiteName = 'pl-contract';
+
 interface Options {
-  pdfPath: string;
+  path: string;
+  suite: string | null;
   url: string;
   origin: string;
 }
@@ -28,33 +36,36 @@ function print(line = ''): void {
 }
 
 function parseArgs(args: readonly string[]): Options | null {
-  let pdfPath: string | undefined;
+  let path: string | undefined;
+  let suite: string | null = null;
   let url = DEFAULT_URL;
   let origin: string | undefined;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === '--url' || arg === '--origin') {
+    if (arg === '--url' || arg === '--origin' || arg === '--suite') {
       const value = args[index + 1];
       if (value === undefined) {
         return null;
       }
       if (arg === '--url') {
         url = value.replace(/\/+$/, '');
-      } else {
+      } else if (arg === '--origin') {
         origin = value;
+      } else {
+        suite = value;
       }
       index += 1;
-    } else if (arg !== undefined && pdfPath === undefined) {
-      pdfPath = arg;
+    } else if (arg !== undefined && path === undefined) {
+      path = arg;
     } else {
       return null;
     }
   }
-  if (pdfPath === undefined) {
+  if (path === undefined) {
     return null;
   }
   const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(url);
-  return { pdfPath, url, origin: origin ?? (isLocal ? LOCAL_ORIGIN : PROD_ORIGIN) };
+  return { path, suite, url, origin: origin ?? (isLocal ? LOCAL_ORIGIN : PROD_ORIGIN) };
 }
 
 /** Parses the worker's "calls=2; input_tokens=…; output_tokens=…" header. */
@@ -75,17 +86,43 @@ function parseUsage(header: string | null) {
   return { calls: values.get('calls') ?? 0, inputTokens, outputTokens, costUsd };
 }
 
+/** A .txt fixture brings its own file name, page split and suite; a PDF is extracted like the app. */
+async function loadInput(
+  options: Options,
+): Promise<{ extracted: ExtractedDocument; fileName: string; suite: string }> {
+  if (options.path.endsWith('.txt')) {
+    const fixture = await loadTextFixture(options.path);
+    return {
+      extracted: fixture,
+      fileName: fixture.fileName,
+      suite: options.suite ?? fixture.suite ?? DEFAULT_PDF_SUITE,
+    };
+  }
+  return {
+    extracted: await extractPdf(options.path),
+    fileName: options.path.split('/').pop() ?? 'document.pdf',
+    suite: options.suite ?? DEFAULT_PDF_SUITE,
+  };
+}
+
 async function main(): Promise<number> {
   const options = parseArgs(process.argv.slice(2));
   if (options === null) {
-    print('Usage: npm run eval -- <path-to-pdf> [--url <worker-url>] [--origin <origin>]');
+    print(USAGE);
     return 2;
   }
 
-  const extracted = await extractPdf(options.pdfPath);
-  const fileName = options.pdfPath.split('/').pop() ?? 'document.pdf';
+  const input = await loadInput(options);
+  if (!isSuiteName(input.suite)) {
+    print(`Unknown expectation suite "${input.suite}". Known: ${Object.keys(SUITES).join(', ')}.`);
+    return 2;
+  }
+  const checks = SUITES[input.suite];
+  const { extracted, fileName } = input;
   const body: AnalyzeRequest = { fileName, pages: extracted.pages, text: extracted.text };
-  print(`PDF: ${fileName} · ${extracted.pages} pages · ${extracted.text.length} characters`);
+  print(
+    `Document: ${fileName} · ${extracted.pages} pages · ${extracted.text.length} characters · suite ${input.suite}`,
+  );
   print(`Worker: ${options.url} (Origin: ${options.origin})`);
 
   const startedAt = performance.now();
@@ -113,7 +150,7 @@ async function main(): Promise<number> {
   let passed = 0;
   let applicable = 0;
   print();
-  for (const check of CHECKS) {
+  for (const check of checks) {
     const outcome = check.run(context);
     if (outcome !== null) {
       applicable += 1;

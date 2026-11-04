@@ -1,0 +1,40 @@
+# Eval fixture: a FICTIONAL English CV. All people, companies and places are invented.
+# Header lines start with "#". "fileName" and "pages" are sent to the worker as in the app;
+# the body is split into pages on lines that are exactly "=== PAGE BREAK ===".
+# fileName: Jordan_Ellis_CV.pdf
+# pages: 2
+# expectations: en-cv
+Jordan Ellis
+Senior Mobile Engineer
+Leeds, United Kingdom · jordan.ellis@example.com
+
+Profile
+Mobile engineer with eight years of experience building consumer apps in React Native and Kotlin.
+Shipped four apps to the App Store and Google Play, with more than 300,000 monthly active users in total.
+
+Experience
+
+Senior Mobile Engineer — Brightfield Labs Ltd, Leeds
+01/03/2024 – 10/2026
+- Led a team of four engineers rebuilding the Brightfield delivery app in React Native.
+- Cut the crash rate from 2.1% to 0.4% by introducing automated release checks.
+- Published monthly releases to the App Store and Google Play.
+
+Freelance Mobile Developer — self-employed
+06/2021 – 01/03/2024
+- Built booking apps for small clients, including Harbour Lane Dental Clinic and Northcove Studio.
+- Maintained Firebase back ends and in-app analytics for six client apps.
+=== PAGE BREAK ===
+Education
+BSc in Computer Science — University of Westmere, 2017 – 2021
+
+Certifications
+Google Associate Android Developer, issued 15/09/2022
+
+Skills
+React Native, TypeScript, Kotlin, Swift, Firebase, GitHub Actions, Figma
+
+Languages
+English (native), Spanish (B2)
+
+References available on request.
