@@ -61,3 +61,26 @@ describe('analysisReducer', () => {
     });
   });
 });
+
+describe('isBusy (drives the beforeunload warning)', () => {
+  const reading = analysisReducer(initialAnalysisState, { type: 'start', file, now: 0 });
+  const ocr = analysisReducer(reading, { type: 'ocrPage', page: 3 });
+  const analyzing = analysisReducer(ocr, { type: 'extracted', findings });
+  const success = analysisReducer(analyzing, { type: 'succeeded', analysis });
+  const error = analysisReducer(analyzing, { type: 'failed', code: 'timeout', file });
+  const fromHistory = analysisReducer(initialAnalysisState, { type: 'openHistory', analysis });
+
+  it('is true while the PDF is read, OCR runs or the AI is working', () => {
+    expect(isBusy(reading)).toBe(true);
+    expect(isBusy(ocr)).toBe(true);
+    expect(isBusy(analyzing)).toBe(true);
+  });
+
+  it('is false when nothing would be lost by leaving the page', () => {
+    expect(isBusy(initialAnalysisState)).toBe(false);
+    expect(isBusy(success)).toBe(false);
+    expect(isBusy(error)).toBe(false);
+    expect(isBusy(fromHistory)).toBe(false);
+    expect(isBusy(analysisReducer(analyzing, { type: 'reset' }))).toBe(false);
+  });
+});

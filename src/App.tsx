@@ -1,4 +1,4 @@
-import { useReducer, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { analyze } from './api/client';
 import { AppHeader } from './components/AppHeader';
 import { EmptyState } from './components/EmptyState';
@@ -11,10 +11,18 @@ import { UploadZone } from './components/UploadZone';
 import {
   analysisReducer,
   initialAnalysisState,
+  isBusy,
   type AnalysisState,
   type CompletedAnalysis,
 } from './lib/analysisState';
 import { buildAnalyzeRequest } from './lib/analyzeRequest';
+import {
+  browserSessionStorage,
+  clearCurrentAnalysisId,
+  loadCurrentAnalysis,
+  loadCurrentAnalysisId,
+  saveCurrentAnalysisId,
+} from './lib/currentAnalysis';
 import { AppError, errorMessage, isRetryable, toErrorCode } from './lib/errors';
 import { validatePdfFile } from './lib/fileValidation';
 import {
@@ -30,6 +38,22 @@ import { extractPdfText } from './lib/pdf';
 
 /** localStorage for the history (F-09), or null when the browser blocks it. */
 const historyStorage = browserStorage();
+/** sessionStorage for the id of the result on screen (survives a reload of this tab). */
+const sessionStore = browserSessionStorage();
+
+/**
+ * First state after a page load: the result that was on screen before a reload, if it is still in
+ * the history; otherwise the empty state (also after a reload in the middle of an analysis).
+ */
+function restoreState(history: readonly HistoryEntry[]): AnalysisState {
+  const entry = loadCurrentAnalysis(sessionStore, history);
+  return entry ? { status: 'success', analysis: entry } : initialAnalysisState;
+}
+
+/** Makes the browser ask "Leave site?" (its own text; custom messages are ignored). */
+function warnBeforeUnload(event: BeforeUnloadEvent) {
+  event.preventDefault();
+}
 
 /** Text for the screen reader live region, one per state. */
 function announcement(state: AnalysisState): string {
@@ -50,12 +74,24 @@ function announcement(state: AnalysisState): string {
 }
 
 export function App() {
-  const [state, dispatch] = useReducer(analysisReducer, initialAnalysisState);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<HistoryEntry[]>(() => loadHistory(historyStorage));
+  const [state, dispatch] = useReducer(analysisReducer, history, restoreState);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Leaving the page while the PDF is read / OCR'd / analysed would lose the work: warn only then.
+  const busy = isBusy(state);
+  useEffect(() => {
+    if (!busy) {
+      return;
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload);
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+  }, [busy]);
 
   /** Full flow for one file: validate → extract text (+ OCR) → call the API → save to history. */
   async function runAnalysis(file: File) {
+    // A reload from now on starts empty instead of showing the previous result.
+    clearCurrentAnalysisId(sessionStore);
     dispatch({ type: 'start', file, now: Date.now() });
     try {
       const fileError = await validatePdfFile(file);
@@ -83,7 +119,9 @@ export function App() {
         analyzedAt: new Date().toISOString(),
       };
       dispatch({ type: 'succeeded', analysis });
-      setHistory((current) => addToHistory(historyStorage, current, analysis, crypto.randomUUID()));
+      const id = crypto.randomUUID();
+      setHistory((current) => addToHistory(historyStorage, current, analysis, id));
+      saveCurrentAnalysisId(sessionStore, id);
     } catch (error) {
       dispatch({ type: 'failed', code: toErrorCode(error), file });
     }
@@ -99,6 +137,7 @@ export function App() {
   }
 
   function pickAnotherFile() {
+    clearCurrentAnalysisId(sessionStore);
     dispatch({ type: 'reset' });
     focusFileInput();
   }
@@ -108,7 +147,15 @@ export function App() {
     requestAnimationFrame(() => fileInputRef.current?.focus());
   }
 
+  function openHistoryEntry(entry: HistoryEntry) {
+    saveCurrentAnalysisId(sessionStore, entry.id);
+    dispatch({ type: 'openHistory', analysis: entry });
+  }
+
   function removeHistoryEntry(id: string) {
+    if (loadCurrentAnalysisId(sessionStore) === id) {
+      clearCurrentAnalysisId(sessionStore);
+    }
     const next = removeFromHistory(historyStorage, history, id);
     setHistory(next);
     if (next.length === 0) {
@@ -118,6 +165,7 @@ export function App() {
   }
 
   function clearAllHistory() {
+    clearCurrentAnalysisId(sessionStore);
     setHistory(clearHistory(historyStorage));
     focusFileInput();
   }
@@ -143,7 +191,7 @@ export function App() {
             <EmptyState />
             <HistoryList
               entries={history}
-              onOpen={(entry) => dispatch({ type: 'openHistory', analysis: entry })}
+              onOpen={openHistoryEntry}
               onRemove={removeHistoryEntry}
               onClear={clearAllHistory}
             />
