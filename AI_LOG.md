@@ -65,6 +65,9 @@ Trzy warstwy ochrony budżetu: kredyt prepaid (twardy limit), dzienny licznik wy
 | 14 | tesseract.js zawieszał się bez błędu (zapis cache do IndexedDB nigdy się nie kończył) | OCR „pending” w headless Chrome | `cacheMethod: 'none'`; potwierdzone włączeniem/wyłączeniem |
 | 15 | `createWorker` połyka błędy startu → ścieżka „OCR nie działa” też się zawieszała | zablokowanie plików językowych w przeglądarce | wrapper odrzucający przez `errorHandler` + 30 s timeout |
 | 16 | „Szary” przycisk „Pobierz JSON” zgłoszony jako bug UI | analiza: przy druku do PDF przeglądarka pomija tła → biały tekst na białym | style `@media print` zamiast „naprawiania” przycisku |
+| 17 | Test kontrastu importował `index.css?raw`, ale Vitest zamienia importy CSS na pusty string → wszystkie pary „padały” | podejrzanie 100% błędów | odczyt pliku przez `node:fs` |
+| 18 | Projekt focus ringu przełącznika motywu na niebieskim tle zaznaczonej opcji — < 3:1 | test kontrastu | ring przeniesiony na zewnątrz, na tło nagłówka |
+| 19 | Test kontrastu wykrył 2 STARE błędy z wcześniejszych etapów: focus ring (~2:1) i ramka ostrzeżenia (~2,7:1) w jasnym motywie | automatyczny test zamiast „na oko” | nowe kolory `#b45309`; dowód, że wcześniejsze „WCAG AA” agentów było deklaracją bez pomiaru |
 
 ## Wnioski
 _(na koniec)_
