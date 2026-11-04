@@ -2,7 +2,7 @@ name = "pdf-insight-api"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
 
-# Public, non-secret configuration only.
+# Public, non-secret configuration only. ALLOWED_ORIGIN may be a comma-separated list (exact matches).
 # GEMINI_API_KEY is a secret: `wrangler secret put GEMINI_API_KEY` (prod) or worker/.dev.vars (local).
 [vars]
 ALLOWED_ORIGIN = "https://kqjqxb.github.io"

@@ -6,6 +6,6 @@ export default defineConfig({
   base: '/Greywolf-Group-test-task/',
   plugins: [react()],
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'worker/**/*.test.ts'],
   },
 });
