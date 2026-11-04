@@ -1,8 +1,11 @@
 # AI_LOG — praca z AI
 
 ## Narzędzia
-- **Claude Code** (Opus 5.5, rozszerzenie VS Code) — główny agent: planowanie, implementacja, review.
-- _(uzupełnić: inne narzędzia, jeśli użyte)_
+- **Claude Code** (Opus 5.5, rozszerzenie VS Code), w dwóch rolach:
+  - **orkiestrator** (jeden długi czat): analiza briefu, plan, kontrakt danych, prompty dla wykonawców, review diffów, merge, commity, deploy-checki, ten log;
+  - **wykonawcy** (nowy czat na każdy etap, osobny git worktree): implementacja, testy, pomiary; raport kończy się listą odchyleń i błędów.
+- **Playwright / headless Chrome** (uruchamiane przez agentów): testy przepływu w przeglądarce, 360 px, CSP, druk, zrzuty ekranu.
+- **Wrangler, GitHub Actions** — deploy i CI. Ręcznie (przeze mnie): sekrety, konta, decyzje architektoniczne.
 
 ## Podejście (context engineering)
 1. Przed pierwszą linijką kodu: brief przepisany do `docs/BRIEF.md` (źródło prawdy dla agentów), łącznie z analizą pułapek w pliku testowym.
@@ -70,4 +73,9 @@ Trzy warstwy ochrony budżetu: kredyt prepaid (twardy limit), dzienny licznik wy
 | 19 | Test kontrastu wykrył 2 STARE błędy z wcześniejszych etapów: focus ring (~2:1) i ramka ostrzeżenia (~2,7:1) w jasnym motywie | automatyczny test zamiast „na oko” | nowe kolory `#b45309`; dowód, że wcześniejsze „WCAG AA” agentów było deklaracją bez pomiaru |
 
 ## Wnioski
-_(na koniec)_
+- **Kontekst w repo > pamięć czatu.** Każdy wykonawca startował bez historii i dostawał to samo: `CLAUDE.md` (twarde reguły), `docs/BRIEF.md` (specyfikacja + pułapki test PDF), `PLAN.md` (stan). Dzięki temu żadna z sesji wykonawców nie „rozjechała się” z wymaganiami, mimo że nie znały poprzednich rozmów.
+- **Kontrakt przed równoległą pracą.** Schemat Zod definiowałem sam przed każdym podziałem pracy (Etap 2, 4); agenci mieli zakaz jego zmiany. Dwa razy po dwie równoległe gałęzie — jedyny konflikt to `package-lock.json`.
+- **Agent nie commituje.** Każdy diff przechodził mój review, potem kilka logicznych commitów (Conventional Commits). Review i ręczny test demo łapały to, czego agent nie zgłosił: np. 28 dat z duplikatami w wyniku (→ prompt 1.1.0) czy prawdziwą przyczynę „szarego” przycisku (druk bez teł).
+- **Mierz, nie deklaruj.** Najcenniejsze błędy złapały automatyczne pomiary, nie „wygląda dobrze”: eval na prawdziwym PDF, pomiar latencji (thinking level), `quotaId` w błędzie 429 (zmiana dostawcy), test kontrastu na prawdziwych tokenach CSS (2 stare błędy, które wcześniej agenci „deklarowali” jako AA).
+- **Diagnoza AI bywa błędna.** Dwa razy agent pewnie wskazał złą przyczynę (thinking → 502, prompt → 6 zdań). Zasada, którą dodałem: zapisuj surowy output przy pierwszej diagnozie i potwierdzaj przyczynę eksperymentem.
+- **Bezpieczeństwo jako wymaganie, nie dodatek.** Sekrety tylko przez `wrangler secret`/`pbpaste` — klucz nie trafił ani do repo, ani do żadnego czatu z agentem.
