@@ -19,3 +19,16 @@ body {
   margin: 0 auto;
   padding: 1.5rem 1rem;
 }
+
+/* TODO(Stage 2): remove together with ApiStatus. */
+.api-status {
+  font-size: 0.875rem;
+}
+
+.api-status--online {
+  color: #1b5e20;
+}
+
+.api-status--offline {
+  color: #b71c1c;
+}
