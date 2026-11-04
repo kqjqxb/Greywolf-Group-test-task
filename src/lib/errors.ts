@@ -53,7 +53,7 @@ const MESSAGES: Record<AppErrorCode, string> = {
   pdf_encrypted: 'Plik PDF jest zabezpieczony hasłem. Usuń zabezpieczenie i spróbuj ponownie.',
   pdf_corrupted: 'Nie udało się odczytać pliku PDF. Plik może być uszkodzony.',
   pdf_no_text:
-    'Ten PDF nie zawiera warstwy tekstowej (prawdopodobnie jest skanem). Analiza skanów nie jest jeszcze obsługiwana.',
+    'Ten PDF nie zawiera warstwy tekstowej, a automatyczne rozpoznawanie tekstu (OCR) nie odczytało z niego treści. Spróbuj z wyraźniejszym skanem lub plikiem z tekstem.',
   text_too_large: `Tekst dokumentu jest za długi do analizy (limit ${MAX_REQUEST_BODY_BYTES / MB} MB tekstu).`,
   // Client-side: network
   network: 'Brak połączenia z usługą analizy. Sprawdź połączenie z internetem i spróbuj ponownie.',

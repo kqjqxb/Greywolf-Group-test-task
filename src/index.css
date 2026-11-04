@@ -502,3 +502,162 @@ dl {
     animation-duration: 3s;
   }
 }
+
+/* ---------- Small buttons, result meta ---------- */
+
+.button--small {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.result-meta {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Shown only on paper (see the print styles below). */
+.print-only {
+  display: none;
+}
+
+/* ---------- History (F-09) ---------- */
+
+.history__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.history__note {
+  font-size: 0.875rem;
+}
+
+.history__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.history__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+/* The whole row text is one button that opens the saved result. */
+.history__open {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history__open:hover {
+  background: var(--color-primary-soft);
+}
+
+.history__name {
+  font-weight: 600;
+  color: var(--color-primary);
+  overflow-wrap: anywhere;
+}
+
+.history__details {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+/* ---------- Print / "Save as PDF" ---------- */
+
+/*
+ * Browsers drop background colours when printing, so a filled button would become white text on
+ * white. Controls make no sense on paper anyway: hide them and print the result in black on white.
+ */
+@media print {
+  :root,
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .no-print,
+  .button,
+  .dropzone,
+  .visually-hidden {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+    font-size: 0.875rem;
+  }
+
+  .header {
+    border-bottom: 1px solid #000000;
+  }
+
+  .header__title,
+  .eyebrow,
+  .notice,
+  .muted,
+  .list .context,
+  .facts dt,
+  .result-meta,
+  .tag {
+    color: #000000;
+  }
+
+  .app {
+    padding-block: 1rem;
+  }
+
+  .card {
+    box-shadow: none;
+    border-color: #808080;
+    break-inside: avoid;
+  }
+
+  /* Long lists may need to continue on the next page; keep single items together instead. */
+  .list li {
+    break-inside: avoid;
+  }
+
+  .notice {
+    background: none;
+    border: 1px solid #808080;
+    border-left-width: 4px;
+  }
+
+  .tag {
+    background: none;
+    border: 1px solid #808080;
+  }
+
+  .results__title {
+    break-after: avoid;
+  }
+
+  .result-meta {
+    text-align: left;
+  }
+}

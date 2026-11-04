@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, type ChangeEvent, type DragEvent, type Ref } from 'react';
 import { MAX_FILE_SIZE_BYTES } from '../lib/limits';
+import { MAX_OCR_PAGES } from '../lib/pdfText';
 
 interface UploadZoneProps {
   onFiles: (files: File[]) => void;
@@ -87,7 +88,8 @@ export function UploadZone({ onFiles, inputRef }: UploadZoneProps) {
         Wybierz plik PDF
       </label>
       <p id={hintId} className="dropzone__hint">
-        Tylko pliki PDF z warstwą tekstową, maks. {MAX_MB} MB.
+        Pliki PDF do {MAX_MB} MB. Zeskanowane strony (bez warstwy tekstowej) zostaną rozpoznane
+        automatycznie (OCR, maks. {MAX_OCR_PAGES} stron).
       </p>
     </div>
   );

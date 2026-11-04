@@ -2,8 +2,8 @@ import { AppError } from '../lib/errors';
 import {
   AnalyzeResponseSchema,
   ApiErrorSchema,
-  type AnalysisResult,
   type AnalyzeRequest,
+  type AnalyzeResponse,
 } from '../lib/schema';
 import { API_URL } from './config';
 
@@ -34,14 +34,15 @@ async function send(body: string, signal: AbortSignal): Promise<Response> {
 }
 
 /**
- * Calls `POST /analyze`. The response is never trusted: it must match AnalyzeResponseSchema,
+ * Calls `POST /analyze` and returns the result with the optional meta (model, cache, time).
+ * The response is never trusted: it must match AnalyzeResponseSchema,
  * otherwise a known `{ error }` body is mapped to its code and anything else is `invalid_response`.
  * Always throws AppError on failure: an ApiErrorCode, `network`, `timeout` or `invalid_response`.
  */
 export async function analyze(
   request: AnalyzeRequest,
   timeoutMs: number = ANALYZE_TIMEOUT_MS,
-): Promise<AnalysisResult> {
+): Promise<AnalyzeResponse> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -62,7 +63,7 @@ export async function analyze(
     if (response.ok) {
       const parsed = AnalyzeResponseSchema.safeParse(body);
       if (parsed.success) {
-        return parsed.data.result;
+        return parsed.data;
       }
     }
     const apiError = ApiErrorSchema.safeParse(body);

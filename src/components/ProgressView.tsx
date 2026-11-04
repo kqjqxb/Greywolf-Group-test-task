@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 
 interface ProgressViewProps {
   step: 'reading' | 'analyzing';
+  /** Page being read with OCR right now (during the reading step), or null. */
+  ocrPage: number | null;
   fileName: string;
   startedAt: number;
 }
@@ -22,16 +24,20 @@ function useElapsedSeconds(startedAt: number): number {
 }
 
 /** F-06 loading state: current step and elapsed time. */
-export function ProgressView({ step, fileName, startedAt }: ProgressViewProps) {
+export function ProgressView({ step, ocrPage, fileName, startedAt }: ProgressViewProps) {
   const elapsed = useElapsedSeconds(startedAt);
   const current = STEPS[step];
+  const label =
+    step === 'reading' && ocrPage !== null
+      ? `Rozpoznawanie tekstu (OCR): strona ${ocrPage}…`
+      : current.label;
 
   return (
     <section className="card progress" aria-labelledby="progress-title" aria-busy="true">
       <div className="spinner" aria-hidden="true" />
       <div>
         <h2 id="progress-title" className="progress__title">
-          {current.label}
+          {label}
         </h2>
         <p className="progress__meta">
           Krok {current.number} z 2 · <span className="progress__file">{fileName}</span>

@@ -1,18 +1,35 @@
-import { useReducer, useRef } from 'react';
+import { useReducer, useRef, useState } from 'react';
 import { analyze } from './api/client';
 import { AppHeader } from './components/AppHeader';
 import { EmptyState } from './components/EmptyState';
 import { ErrorView } from './components/ErrorView';
+import { HistoryList } from './components/HistoryList';
 import { PrivacyNotice } from './components/PrivacyNotice';
 import { ProgressView } from './components/ProgressView';
 import { ResultView } from './components/ResultView';
 import { UploadZone } from './components/UploadZone';
-import { analysisReducer, initialAnalysisState, type AnalysisState } from './lib/analysisState';
+import {
+  analysisReducer,
+  initialAnalysisState,
+  type AnalysisState,
+  type CompletedAnalysis,
+} from './lib/analysisState';
 import { buildAnalyzeRequest } from './lib/analyzeRequest';
 import { AppError, errorMessage, isRetryable, toErrorCode } from './lib/errors';
 import { validatePdfFile } from './lib/fileValidation';
+import {
+  addToHistory,
+  browserStorage,
+  clearHistory,
+  loadHistory,
+  removeFromHistory,
+  type HistoryEntry,
+} from './lib/history';
 import { looksLikePromptInjection } from './lib/injection';
 import { extractPdfText } from './lib/pdf';
+
+/** localStorage for the history (F-09), or null when the browser blocks it. */
+const historyStorage = browserStorage();
 
 /** Text for the screen reader live region, one per state. */
 function announcement(state: AnalysisState): string {
@@ -20,7 +37,9 @@ function announcement(state: AnalysisState): string {
     case 'idle':
       return '';
     case 'reading':
-      return 'Odczytywanie pliku PDF.';
+      return state.ocrPage === null
+        ? 'Odczytywanie pliku PDF.'
+        : `Rozpoznawanie tekstu (OCR): strona ${state.ocrPage}.`;
     case 'analyzing':
       return 'Trwa analiza dokumentu przez AI.';
     case 'success':
@@ -33,8 +52,9 @@ function announcement(state: AnalysisState): string {
 export function App() {
   const [state, dispatch] = useReducer(analysisReducer, initialAnalysisState);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>(() => loadHistory(historyStorage));
 
-  /** Full flow for one file: validate → extract text → call the API. */
+  /** Full flow for one file: validate → extract text (+ OCR) → call the API → save to history. */
   async function runAnalysis(file: File) {
     dispatch({ type: 'start', file, now: Date.now() });
     try {
@@ -42,12 +62,28 @@ export function App() {
       if (fileError) {
         throw new AppError(fileError);
       }
-      const { pageTexts, emptyPages } = await extractPdfText(await file.arrayBuffer());
+      const { pageTexts, emptyPages, ocrPages, ocrLimitReached } = await extractPdfText(
+        await file.arrayBuffer(),
+        { onOcrPage: (page) => dispatch({ type: 'ocrPage', page }) },
+      );
       const request = buildAnalyzeRequest(file.name, pageTexts);
-      const injectionSuspected = looksLikePromptInjection(pageTexts.join('\n'));
-      dispatch({ type: 'extracted', findings: { emptyPages, injectionSuspected } });
-      const result = await analyze(request);
-      dispatch({ type: 'succeeded', result });
+      const findings = {
+        emptyPages,
+        ocrPages,
+        ocrLimitReached,
+        injectionSuspected: looksLikePromptInjection(pageTexts.join('\n')),
+      };
+      dispatch({ type: 'extracted', findings });
+      const response = await analyze(request);
+      const analysis: CompletedAnalysis = {
+        fileName: file.name,
+        result: response.result,
+        meta: response.meta ?? null,
+        findings,
+        analyzedAt: new Date().toISOString(),
+      };
+      dispatch({ type: 'succeeded', analysis });
+      setHistory((current) => addToHistory(historyStorage, current, analysis, crypto.randomUUID()));
     } catch (error) {
       dispatch({ type: 'failed', code: toErrorCode(error), file });
     }
@@ -64,8 +100,26 @@ export function App() {
 
   function pickAnotherFile() {
     dispatch({ type: 'reset' });
-    // The input is rendered again after the reset; focus it on the next frame.
+    focusFileInput();
+  }
+
+  function focusFileInput() {
+    // The input may be rendered only after the next state update; focus it on the next frame.
     requestAnimationFrame(() => fileInputRef.current?.focus());
+  }
+
+  function removeHistoryEntry(id: string) {
+    const next = removeFromHistory(historyStorage, history, id);
+    setHistory(next);
+    if (next.length === 0) {
+      // The list (and the focused button) disappears; keep keyboard users in a sensible place.
+      focusFileInput();
+    }
+  }
+
+  function clearAllHistory() {
+    setHistory(clearHistory(historyStorage));
+    focusFileInput();
   }
 
   const retryFile = state.status === 'error' && isRetryable(state.code) ? state.file : null;
@@ -87,12 +141,19 @@ export function App() {
             <UploadZone onFiles={handleFiles} inputRef={fileInputRef} />
             <PrivacyNotice />
             <EmptyState />
+            <HistoryList
+              entries={history}
+              onOpen={(entry) => dispatch({ type: 'openHistory', analysis: entry })}
+              onRemove={removeHistoryEntry}
+              onClear={clearAllHistory}
+            />
           </>
         )}
 
         {(state.status === 'reading' || state.status === 'analyzing') && (
           <ProgressView
             step={state.status}
+            ocrPage={state.status === 'reading' ? state.ocrPage : null}
             fileName={state.file.name}
             startedAt={state.startedAt}
           />
@@ -107,15 +168,10 @@ export function App() {
         )}
 
         {state.status === 'success' && (
-          <ResultView
-            result={state.result}
-            pdfFileName={state.file.name}
-            findings={state.findings}
-            onNewFile={pickAnotherFile}
-          />
+          <ResultView analysis={state.analysis} onNewFile={pickAnotherFile} />
         )}
       </main>
-      <footer className="footer">
+      <footer className="footer no-print">
         <p>
           PDF Insight · plik jest odczytywany w przeglądarce, do analizy AI trafia tylko jego tekst.
         </p>

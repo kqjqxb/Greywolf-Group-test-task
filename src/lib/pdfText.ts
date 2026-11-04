@@ -85,12 +85,7 @@ export function joinTextItems(items: readonly TextPiece[]): string {
     }
   }
 
-  return text
-    .split('\n')
-    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return normaliseText(text);
 }
 
 /** 1-based numbers of pages that have no text layer. */
@@ -106,4 +101,28 @@ export function buildDocumentText(pageTexts: readonly string[]): string {
   return pageTexts
     .flatMap((text, index) => (text.trim() === '' ? [] : [`--- Strona ${index + 1} ---\n${text}`]))
     .join('\n\n');
+}
+
+/** At most this many pages are sent to OCR: each page takes a few seconds in the browser. */
+export const MAX_OCR_PAGES = 5;
+
+/** Which empty pages to OCR (the first MAX_OCR_PAGES) and which to skip because of the limit. */
+export function planOcr(emptyPages: readonly number[]): { ocr: number[]; skipped: number[] } {
+  return {
+    ocr: emptyPages.slice(0, MAX_OCR_PAGES),
+    skipped: emptyPages.slice(MAX_OCR_PAGES),
+  };
+}
+
+/**
+ * Single spaces, trimmed lines, at most one empty line in a row. Used for pdf.js text and for
+ * OCR output, so both look the same to the model.
+ */
+export function normaliseText(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }

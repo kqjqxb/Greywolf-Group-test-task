@@ -5,7 +5,8 @@ import { AnalyzeRequestSchema } from '../lib/schema';
  * DEV-ONLY stand-in for the worker, enabled with VITE_MOCK_API=1 in `npm run dev`
  * (never included in production builds, see client.ts). Returns a real `Response`, so the
  * client's validation runs exactly as with the worker.
- * A file name containing "blad" returns `ai_unavailable`, to try the error state.
+ * A file name containing "blad" returns `ai_unavailable`, to try the error state;
+ * one containing "cache" is answered as a cached result.
  */
 const MOCK_DELAY_MS = 1500;
 
@@ -26,10 +27,18 @@ export function mockFetch(body: string, signal: AbortSignal): Promise<Response> 
         resolve(json({ error: 'ai_unavailable' }, 503));
       } else {
         const { fileName, pages } = request.data;
+        const cached = fileName.toLowerCase().includes('cache');
         resolve(
           json(
             {
               result: { ...sampleResult, document: { ...sampleResult.document, fileName, pages } },
+              meta: {
+                model: 'mock-model',
+                promptVersion: 'mock',
+                durationMs: cached ? 3 : MOCK_DELAY_MS,
+                cached,
+                chunks: 1,
+              },
             },
             200,
           ),
