@@ -31,14 +31,14 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 - [x] ✅ Kryterium: front na Pages woła worker i dostaje odpowiedź
 
 ### Etap 2 — Rdzeń MUST (≈6 h)
-- [ ] F-01 Upload: drag & drop + input, walidacja typu (MIME + magic bytes `%PDF`) i rozmiaru ≤ 10 MB
-- [ ] F-02 pdf.js: ekstrakcja tekstu per strona, poprawny worker URL pod `base`
-- [ ] F-04 Schemat Zod + testy Vitest (poprawne, brakujące pola, złe daty/waluty, za mało zdań)
-- [ ] Worker: prompt systemowy (dane ≠ instrukcje, delimitery), structured output, walidacja, 1 retry
-- [ ] F-03 Podsumowanie 3–5 zdań w języku dokumentu
-- [ ] F-05 Widok wyników + podgląd JSON + pobranie `.json`
-- [ ] F-06 Stany: pusty, ładowanie (z etapami), błąd z „Spróbuj ponownie”
-- [ ] Informacja, że plik trafia do API AI
+- [x] F-01 Upload: drag & drop + input, walidacja typu (MIME + magic bytes `%PDF`) i rozmiaru ≤ 10 MB
+- [x] F-02 pdf.js: ekstrakcja tekstu per strona, poprawny worker URL pod `base`
+- [x] F-04 Schemat Zod + testy Vitest (poprawne, brakujące pola, złe daty/waluty, za mało zdań)
+- [x] Worker: prompt systemowy (dane ≠ instrukcje, delimitery), structured output, walidacja, 1 retry
+- [x] F-03 Podsumowanie 3–5 zdań w języku dokumentu
+- [x] F-05 Widok wyników + podgląd JSON + pobranie `.json`
+- [x] F-06 Stany: pusty, ładowanie (z etapami), błąd z „Spróbuj ponownie”
+- [x] Informacja, że plik trafia do API AI
 - [ ] ✅ Kryterium: test PDF → wynik < 30 s na demo
 
 ### Etap 3 — Bezpieczeństwo (≈2 h)
