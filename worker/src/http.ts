@@ -1,3 +1,5 @@
+import type { ApiErrorCode } from '../../src/lib/schema';
+
 /** JSON response helper. */
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -6,20 +8,8 @@ export function json(body: unknown, status = 200): Response {
   });
 }
 
-/** Machine-readable error codes returned as `{ error: <code> }`. */
-export type ErrorCode =
-  | 'not_found'
-  | 'method_not_allowed'
-  | 'forbidden_origin'
-  | 'unsupported_media_type'
-  | 'payload_too_large'
-  | 'invalid_json'
-  | 'invalid_body'
-  | 'not_implemented'
-  | 'internal_error';
-
-/** Error response: only a fixed code, never a stack trace or echoed input. */
-export function errorResponse(code: ErrorCode, status: number): Response {
+/** Error response: only a fixed code from the shared contract, never a stack trace or echoed input. */
+export function errorResponse(code: ApiErrorCode, status: number): Response {
   return json({ error: code }, status);
 }
 
