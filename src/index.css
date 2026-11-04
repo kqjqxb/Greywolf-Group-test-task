@@ -1,4 +1,23 @@
+/* Colors chosen for WCAG AA contrast (≥ 4.5:1 for text) on their backgrounds. */
 :root {
+  --color-bg: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-text: #111827;
+  --color-muted: #4b5563;
+  --color-border: #d1d5db;
+  --color-primary: #1d4ed8;
+  --color-primary-hover: #1e40af;
+  --color-primary-soft: #eff6ff;
+  --color-focus: #f59e0b;
+  --color-error: #b91c1c;
+  --color-error-soft: #fef2f2;
+  --color-warning-text: #713f12;
+  --color-warning-soft: #fef3c7;
+  --color-warning-border: #d97706;
+  --color-info-text: #1e3a8a;
+  --radius: 0.75rem;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.08);
+
   font-family:
     system-ui,
     -apple-system,
@@ -6,29 +25,466 @@
     Roboto,
     sans-serif;
   line-height: 1.5;
-  color: #1a1a1a;
-  background-color: #ffffff;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  min-width: 320px;
+  background-color: var(--color-bg);
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+dl {
+  margin: 0;
+}
+
+/* Visible keyboard focus everywhere (mouse clicks do not show it). */
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Headings receive focus programmatically; no outline needed there. */
+[tabindex='-1']:focus {
+  outline: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Layout ---------- */
+
+.header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header__inner,
+.app,
+.footer {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding-inline: 1rem;
+}
+
+.header__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding-block: 1rem;
+}
+
+.header__title {
+  font-size: 1.375rem;
+  color: var(--color-primary);
+}
+
+.header__tagline {
+  color: var(--color-muted);
+  font-size: 0.9375rem;
 }
 
 .app {
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-block: 1.5rem 2rem;
 }
 
-/* TODO(Stage 2): remove together with ApiStatus. */
-.api-status {
+.lead {
+  font-size: 1.0625rem;
+}
+
+.footer {
+  padding-block: 1rem 2rem;
+  color: var(--color-muted);
   font-size: 0.875rem;
 }
 
-.api-status--online {
-  color: #1b5e20;
+/* ---------- Buttons ---------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.125rem;
+  border: 2px solid var(--color-primary);
+  border-radius: 0.5rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
-.api-status--offline {
-  color: #b71c1c;
+.button--primary {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.button--primary:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.button--secondary {
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.button--secondary:hover {
+  background: var(--color-primary-soft);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.actions__status {
+  font-size: 0.9375rem;
+  color: var(--color-muted);
+}
+
+/* ---------- Upload ---------- */
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  background: var(--color-surface);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius);
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+
+.dropzone--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+/* The real <input> is hidden; show its focus on the visible label. */
+.dropzone input:focus-visible + label {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.dropzone__icon {
+  width: 3rem;
+  height: 3rem;
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dropzone__title {
+  font-weight: 600;
+  font-size: 1.0625rem;
+}
+
+.dropzone__or,
+.dropzone__hint {
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+}
+
+/* ---------- Notices ---------- */
+
+.notice {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border-left: 4px solid;
+  font-size: 0.9375rem;
+}
+
+.notice--info {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  color: var(--color-info-text);
+}
+
+.notice--warning {
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+
+/* ---------- Empty state steps ---------- */
+
+.steps {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.steps__number {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+@media (min-width: 40rem) {
+  .steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .steps li {
+    align-items: flex-start;
+  }
+}
+
+/* ---------- Cards ---------- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card--error {
+  border-color: var(--color-error);
+  border-left-width: 4px;
+  background: var(--color-error-soft);
+}
+
+.card--error .card__title {
+  color: var(--color-error);
+}
+
+.card__title {
+  font-size: 1.0625rem;
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+.break {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Progress ---------- */
+
+.progress {
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+}
+
+.progress__title {
+  font-size: 1.0625rem;
+}
+
+.progress__meta {
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+}
+
+.progress__file {
+  overflow-wrap: anywhere;
+}
+
+.spinner {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 4px solid var(--color-primary-soft);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Results ---------- */
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.results__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.results__title {
+  font-size: 1.5rem;
+}
+
+.eyebrow {
+  color: var(--color-primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.doc-title {
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem 1.5rem;
+}
+
+.facts dt {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.summary {
+  font-size: 1.0625rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 40rem) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.list .value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.list .context {
+  color: var(--color-muted);
+}
+
+.list .context::before {
+  content: ' — ';
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-info-text);
+  font-size: 0.875rem;
+}
+
+/* ---------- JSON preview ---------- */
+
+.json-preview summary {
+  width: fit-content;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.json-preview pre {
+  max-height: 28rem;
+  margin: 0.75rem 0 0;
+  padding: 1rem;
+  overflow: auto;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+
+  /* Keep a slow spin so the loading state is still recognisable, without fast motion. */
+  .spinner {
+    animation-duration: 3s;
+  }
 }
