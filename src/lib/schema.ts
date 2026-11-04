@@ -68,12 +68,16 @@ export type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
 
 /** Diagnostics about how the result was produced (not part of the exported JSON result). */
 export const AnalyzeMetaSchema = z.object({
-  /** Gemini model that produced the result (the primary or the fallback model). */
+  /** Model that produced the result (e.g. "claude-haiku-5-5" or a Gemini fallback model). */
   model: z.string(),
   /** Version of the worker prompt (worker/src/ai/prompt.ts). */
   promptVersion: z.string(),
   /** Time the worker spent on the AI part of the request, in milliseconds. */
   durationMs: z.number(),
+  /** True when the result was served from the worker's result cache (no AI call). */
+  cached: z.boolean().optional(),
+  /** Number of text chunks the document was split into (1 = no chunking, F-08). */
+  chunks: z.number().int().positive().optional(),
 });
 export type AnalyzeMeta = z.infer<typeof AnalyzeMetaSchema>;
 
