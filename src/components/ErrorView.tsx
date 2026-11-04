@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { errorMessage, type AppErrorCode } from '../lib/errors';
+import { ErrorIcon } from './icons';
 
 interface ErrorViewProps {
   code: AppErrorCode;
@@ -18,25 +19,30 @@ export function ErrorView({ code, onRetry, onPickAnother }: ErrorViewProps) {
   }, [code]);
 
   return (
-    <section className="card card--error" aria-labelledby="error-title">
-      <h2 id="error-title" ref={headingRef} tabIndex={-1} className="card__title">
-        Nie udało się przeanalizować pliku
-      </h2>
-      <p>{errorMessage(code)}</p>
-      <div className="actions">
-        {onRetry && (
-          <button type="button" className="button button--primary" onClick={onRetry}>
-            Spróbuj ponownie
+    <div className="reveal">
+      <section className="card error-card" aria-labelledby="error-title">
+        <span className="error-card__icon" aria-hidden="true">
+          <ErrorIcon />
+        </span>
+        <h2 id="error-title" ref={headingRef} tabIndex={-1} className="error-card__title">
+          Nie udało się przeanalizować pliku
+        </h2>
+        <p>{errorMessage(code)}</p>
+        <div className="actions">
+          {onRetry && (
+            <button type="button" className="button button--primary" onClick={onRetry}>
+              Spróbuj ponownie
+            </button>
+          )}
+          <button
+            type="button"
+            className={`button ${onRetry ? 'button--secondary' : 'button--primary'}`}
+            onClick={onPickAnother}
+          >
+            Wybierz inny plik
           </button>
-        )}
-        <button
-          type="button"
-          className={`button ${onRetry ? 'button--secondary' : 'button--primary'}`}
-          onClick={onPickAnother}
-        >
-          Wybierz inny plik
-        </button>
-      </div>
-    </section>
+        </div>
+      </section>
+    </div>
   );
 }

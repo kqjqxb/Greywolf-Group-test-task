@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ChangeEvent, type DragEvent, type Ref } from 'react';
 import { MAX_FILE_SIZE_BYTES } from '../lib/limits';
 import { MAX_OCR_PAGES } from '../lib/pdfText';
+import { FileUpIcon } from './icons';
 
 interface UploadZoneProps {
   onFiles: (files: File[]) => void;
@@ -69,10 +70,9 @@ export function UploadZone({ onFiles, inputRef }: UploadZoneProps) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <svg className="dropzone__icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <path d="M14 2v6h6M12 18v-6M9 15l3-3 3 3" />
-      </svg>
+      <span className="dropzone__icon" aria-hidden="true">
+        <FileUpIcon />
+      </span>
       <p className="dropzone__title">Przeciągnij i upuść plik PDF tutaj</p>
       <p className="dropzone__or">lub</p>
       <input

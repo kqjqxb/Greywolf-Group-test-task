@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { deriveJsonFileName, downloadJson, toPrettyJson } from '../lib/download';
 import type { AnalysisResult } from '../lib/schema';
+import { CodeIcon, CopyIcon, DownloadIcon } from './icons';
 
 interface JsonPanelProps {
   result: AnalysisResult;
@@ -26,16 +27,18 @@ export function JsonPanel({ result, pdfFileName }: JsonPanelProps) {
 
   return (
     // Not printed: buttons and a JSON dump are useless on paper.
-    <section className="card no-print" aria-labelledby="json-title">
-      <h2 id="json-title" className="card__title">
+    <section className="card dashboard__wide no-print" aria-labelledby="json-title">
+      <h3 id="json-title" className="card__title">
+        <CodeIcon />
         Wynik w formacie JSON
-      </h2>
+      </h3>
       <div className="actions">
         <button
           type="button"
           className="button button--primary"
           onClick={() => downloadJson(json, jsonFileName)}
         >
+          <DownloadIcon />
           Pobierz JSON
         </button>
         <button
@@ -43,6 +46,7 @@ export function JsonPanel({ result, pdfFileName }: JsonPanelProps) {
           className="button button--secondary"
           onClick={() => void handleCopy()}
         >
+          <CopyIcon />
           Kopiuj JSON
         </button>
         <span className="actions__status" role="status">
@@ -50,7 +54,7 @@ export function JsonPanel({ result, pdfFileName }: JsonPanelProps) {
           {copyStatus === 'failed' && 'Nie udało się skopiować. Zaznacz tekst poniżej ręcznie.'}
         </span>
       </div>
-      <p className="muted">Plik: {jsonFileName}</p>
+      <p className="json-panel__file">Plik: {jsonFileName}</p>
       <details className="json-preview">
         <summary>Pokaż podgląd JSON</summary>
         {/* Rendered as a text node: React escapes it, nothing is parsed as HTML. */}

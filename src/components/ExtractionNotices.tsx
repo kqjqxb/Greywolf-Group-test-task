@@ -1,6 +1,7 @@
 import type { ExtractionFindings } from '../lib/analysisState';
 import { emptyPagesText, ocrLimitText, ocrPagesText } from '../lib/emptyPagesText';
 import { MAX_OCR_PAGES } from '../lib/pdfText';
+import { InfoIcon, WarningIcon } from './icons';
 import { InjectionNotice } from './InjectionNotice';
 
 interface ExtractionNoticesProps {
@@ -14,20 +15,29 @@ interface ExtractionNoticesProps {
 export function ExtractionNotices({ findings }: ExtractionNoticesProps) {
   const ocr = ocrPagesText(findings.ocrPages);
   const empty = emptyPagesText(findings.emptyPages);
+  if (!ocr && !empty && !findings.injectionSuspected) {
+    return null;
+  }
   return (
-    <>
+    <div className="notices dashboard__wide">
       {ocr && (
-        <p className="notice notice--info">
-          <strong>{ocr.lead}</strong> {ocr.detail}
-        </p>
+        <div className="notice notice--info">
+          <InfoIcon />
+          <p>
+            <strong>{ocr.lead}</strong> {ocr.detail}
+          </p>
+        </div>
       )}
       {empty && (
-        <p className="notice notice--warning">
-          <strong>{empty.lead}</strong> {empty.detail}
-          {findings.ocrLimitReached && ` ${ocrLimitText(MAX_OCR_PAGES)}`}
-        </p>
+        <div className="notice notice--warning">
+          <WarningIcon />
+          <p>
+            <strong>{empty.lead}</strong> {empty.detail}
+            {findings.ocrLimitReached && ` ${ocrLimitText(MAX_OCR_PAGES)}`}
+          </p>
+        </div>
       )}
       {findings.injectionSuspected && <InjectionNotice />}
-    </>
+    </div>
   );
 }

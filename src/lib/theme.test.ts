@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { HistoryStorage } from './history';
-import { loadThemePreference, saveThemePreference, THEME_STORAGE_KEY } from './theme';
+import {
+  loadThemeChoice,
+  oppositeTheme,
+  resolveTheme,
+  revealRadius,
+  saveThemeChoice,
+  THEME_STORAGE_KEY,
+} from './theme';
 
 function fakeStorage(initial: Record<string, string> = {}) {
   const items = new Map(Object.entries(initial));
@@ -24,29 +31,52 @@ const blockedStorage: HistoryStorage = {
   },
 };
 
-describe('theme preference', () => {
-  it('defaults to "system"', () => {
-    expect(loadThemePreference(fakeStorage().storage)).toBe('system');
-    expect(loadThemePreference(null)).toBe('system');
-    expect(loadThemePreference(blockedStorage)).toBe('system');
+describe('theme choice', () => {
+  it('has no explicit choice on the first visit (follow the OS)', () => {
+    expect(loadThemeChoice(fakeStorage().storage)).toBeNull();
+    expect(loadThemeChoice(null)).toBeNull();
+    expect(loadThemeChoice(blockedStorage)).toBeNull();
   });
 
-  it('ignores unexpected stored values', () => {
-    const { storage } = fakeStorage({ [THEME_STORAGE_KEY]: 'neon' });
-    expect(loadThemePreference(storage)).toBe('system');
+  it('treats the old "system" value and unexpected values as no choice', () => {
+    expect(loadThemeChoice(fakeStorage({ [THEME_STORAGE_KEY]: 'system' }).storage)).toBeNull();
+    expect(loadThemeChoice(fakeStorage({ [THEME_STORAGE_KEY]: 'neon' }).storage)).toBeNull();
   });
 
-  it('saves light/dark and removes the key for "system"', () => {
+  it('saves and loads an explicit choice', () => {
     const { items, storage } = fakeStorage();
-    saveThemePreference(storage, 'dark');
-    expect(loadThemePreference(storage)).toBe('dark');
-    saveThemePreference(storage, 'light');
+    saveThemeChoice(storage, 'dark');
+    expect(loadThemeChoice(storage)).toBe('dark');
+    saveThemeChoice(storage, 'light');
     expect(items.get(THEME_STORAGE_KEY)).toBe('light');
-    saveThemePreference(storage, 'system');
-    expect(items.has(THEME_STORAGE_KEY)).toBe(false);
   });
 
   it('never throws when storage is blocked', () => {
-    expect(() => saveThemePreference(blockedStorage, 'dark')).not.toThrow();
+    expect(() => saveThemeChoice(blockedStorage, 'dark')).not.toThrow();
+  });
+});
+
+describe('resolveTheme / oppositeTheme', () => {
+  it('uses the explicit choice over the OS setting', () => {
+    expect(resolveTheme('light', true)).toBe('light');
+    expect(resolveTheme('dark', false)).toBe('dark');
+  });
+
+  it('follows the OS setting without a choice', () => {
+    expect(resolveTheme(null, true)).toBe('dark');
+    expect(resolveTheme(null, false)).toBe('light');
+  });
+
+  it('toggles between light and dark', () => {
+    expect(oppositeTheme('light')).toBe('dark');
+    expect(oppositeTheme('dark')).toBe('light');
+  });
+});
+
+describe('revealRadius', () => {
+  it('reaches the farthest viewport corner', () => {
+    // Button in the top-right corner of a 1280×800 viewport: farthest corner is bottom-left.
+    expect(revealRadius(1240, 32, 1280, 800)).toBeCloseTo(Math.hypot(1240, 768));
+    expect(revealRadius(0, 0, 300, 400)).toBe(500);
   });
 });
