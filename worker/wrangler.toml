@@ -8,14 +8,24 @@ workers_dev = true
 preview_urls = false
 
 # Public, non-secret configuration only. ALLOWED_ORIGIN may be a comma-separated list (exact matches).
-# GEMINI_API_KEY is a secret: `wrangler secret put GEMINI_API_KEY` (prod) or worker/.dev.vars (local).
+# Secrets (never here): `wrangler secret put ANTHROPIC_API_KEY` and `wrangler secret put GEMINI_API_KEY`
+# (prod), or worker/.dev.vars (local).
 [vars]
 ALLOWED_ORIGIN = "https://kqjqxb.github.io"
-# Gemini model ids (free tier). Change here without touching code.
-# The fallback is used when the primary returns 503/timeout/429 (each model has its own quota,
-# free tier: 20 requests per day per model). Both chosen by measuring the test PDF in stage 3.
+# Provider chain: Claude (primary) → GEMINI_MODEL → GEMINI_FALLBACK_MODEL.
+# A provider is skipped on 503/529, timeout, 429 or refusal. Model ids change here without touching code.
+CLAUDE_MODEL = "claude-haiku-5-5"
+# Claude uses prepaid credit: max Claude calls per UTC day (approximate, KV counter — see budget.ts).
+# Over the limit the chain starts with Gemini.
+CLAUDE_DAILY_LIMIT = "150"
+# Gemini model ids (free tier: 20 requests per day per model, each with its own quota).
 GEMINI_MODEL = "gemini-3.6-flash"
 GEMINI_FALLBACK_MODEL = "gemini-3.5-flash-lite"
+
+# Result cache (14 days) and the Claude daily counter. `wrangler dev` simulates KV locally.
+[[kv_namespaces]]
+binding = "PDF_INSIGHT_KV"
+id = "e21f0117f6ab4dc9b88280a4d72caa1e"
 
 # Per-IP limit for POST /analyze: 10 requests per 60 s (period may only be 10 or 60).
 # namespace_id is a positive integer chosen by us, unique within the Cloudflare account.

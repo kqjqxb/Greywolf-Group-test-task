@@ -5,59 +5,103 @@ import {
   type AnalyzeRequest,
 } from '../../../src/lib/schema';
 import { countSentences } from '../../../src/lib/sentences';
-import { callGemini, type GeminiMessage } from './gemini';
-import { buildRetryPrompt, buildUserPrompt, PROMPT_VERSION, SYSTEM_INSTRUCTION } from './prompt';
+import {
+  emptyStats,
+  MIN_CALL_BUDGET_MS,
+  REQUEST_BUDGET_MS,
+  runChain,
+  type AnalyzeError,
+  type CallStats,
+  type Remaining,
+  type Validation,
+} from './chain';
+import { mergeChunkResults, needsChunking, splitIntoChunks } from './chunking';
+import { dedupeAmounts, dedupeStrings, mergeDates } from './dedupe';
+import { SummaryOutputSchema } from './outputSchema';
+import {
+  buildChunkUserPrompt,
+  buildSummaryUserPrompt,
+  buildUserPrompt,
+  PROMPT_VERSION,
+  SUMMARY_SYSTEM_INSTRUCTION,
+  SYSTEM_INSTRUCTION,
+} from './prompt';
+import type { ModelProvider } from './provider';
 
 export const MIN_SUMMARY_SENTENCES = 3;
 export const MAX_SUMMARY_SENTENCES = 5;
 const MAX_REPORTED_PROBLEMS = 10;
-
-/**
- * Time budget for the whole request (all models and the validation retry together).
- * The Definition of Done is "result in < 30 s"; 26 s leaves room for PDF reading and the network,
- * and the frontend waits a bit longer (32 s) so it always receives the worker's own error.
- */
-export const REQUEST_BUDGET_MS = 26_000;
-/** One Gemini call never takes longer than this, even when more budget is left. */
-export const CALL_TIMEOUT_CAP_MS = 20_000;
-/**
- * A new call (fallback model or validation retry) starts only if at least this much budget is left.
- * A 12-page document takes ~10–15 s, so a shorter call would almost surely time out anyway.
- */
-export const MIN_CALL_BUDGET_MS = 8_000;
+/** The final summary of a chunked document is a short call, so it may start with less budget. */
+export const MIN_SUMMARY_BUDGET_MS = 4_000;
 
 export interface AnalyzeOptions {
-  apiKey: string;
-  /** Models to try in order: the primary first, then the fallback (used only on upstream errors). */
-  models: readonly string[];
+  /** Providers to try in order (see routes/analyze.ts for how the list is built). */
+  providers: readonly ModelProvider[];
   /** Clock in milliseconds, injectable for tests. Defaults to Date.now. */
   now?: () => number;
 }
 
-type UpstreamError = 'rate_limited' | 'ai_timeout' | 'ai_unavailable';
-type AnalyzeError = UpstreamError | 'ai_invalid_response';
-
+/** `stats` is returned in both cases: failed calls cost money too and count towards the budget. */
 export type AnalyzeOutcome =
-  { ok: true; result: AnalysisResult; meta: AnalyzeMeta } | { ok: false; error: AnalyzeError };
-
-type Validation = { ok: true; result: AnalysisResult } | { ok: false; problems: string[] };
+  | { ok: true; result: AnalysisResult; meta: AnalyzeMeta; stats: CallStats }
+  | { ok: false; error: AnalyzeError; stats: CallStats };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function parseJson(rawText: string): { ok: true; json: unknown } | { ok: false } {
+  try {
+    return { ok: true, json: JSON.parse(rawText) };
+  } catch {
+    return { ok: false };
+  }
+}
+
+function summaryProblem(summary: string): string | null {
+  const sentences = countSentences(summary);
+  const rule = `"summary" has ${sentences} sentences; it must have ${MIN_SUMMARY_SENTENCES}–${MAX_SUMMARY_SENTENCES}`;
+  // Tell the model how to fix it, not only that it is wrong (a bare count was repeated on retry).
+  if (sentences > MAX_SUMMARY_SENTENCES) {
+    return `${rule}. Rewrite it with at most ${MAX_SUMMARY_SENTENCES} sentences: merge sentences or move details to keyPoints.`;
+  }
+  if (sentences < MIN_SUMMARY_SENTENCES) {
+    return `${rule}. Rewrite it with at least ${MIN_SUMMARY_SENTENCES} complete sentences.`;
+  }
+  return null;
+}
+
+/**
+ * Deterministic clean-up after validation, so the rules hold for every provider:
+ * one entry per date (contexts merged), no duplicate amounts, names or keywords.
+ */
+function cleanUp(result: AnalysisResult): AnalysisResult {
+  return {
+    ...result,
+    entities: {
+      organizations: dedupeStrings(result.entities.organizations),
+      people: dedupeStrings(result.entities.people),
+    },
+    amounts: dedupeAmounts(result.amounts),
+    dates: mergeDates(result.dates),
+    keywords: dedupeStrings(result.keywords),
+  };
+}
+
 /**
  * Checks the model's raw answer: JSON → add fileName/pages from the request → Zod contract
- * → summary sentence count. Problems are short descriptions (paths and rules, no document text)
- * used in the retry prompt.
+ * → summary sentence count → clean-up. Problems are short descriptions (paths and rules,
+ * no document text) used in the retry prompt.
  */
-export function validateModelOutput(rawText: string, request: AnalyzeRequest): Validation {
-  let json: unknown;
-  try {
-    json = JSON.parse(rawText);
-  } catch {
+export function validateModelOutput(
+  rawText: string,
+  request: AnalyzeRequest,
+): Validation<AnalysisResult> {
+  const parsedJson = parseJson(rawText);
+  if (!parsedJson.ok) {
     return { ok: false, problems: ['The answer was not valid JSON.'] };
   }
+  const { json } = parsedJson;
   if (!isRecord(json) || !isRecord(json.document)) {
     return { ok: false, problems: ['The answer must be a JSON object with a "document" object.'] };
   }
@@ -77,81 +121,125 @@ export function validateModelOutput(rawText: string, request: AnalyzeRequest): V
     return { ok: false, problems };
   }
 
-  const sentences = countSentences(parsed.data.summary);
-  if (sentences < MIN_SUMMARY_SENTENCES || sentences > MAX_SUMMARY_SENTENCES) {
-    return {
-      ok: false,
-      problems: [
-        `"summary" has ${sentences} sentences; it must have ${MIN_SUMMARY_SENTENCES}–${MAX_SUMMARY_SENTENCES}.`,
-      ],
-    };
+  const problem = summaryProblem(parsed.data.summary);
+  if (problem !== null) {
+    return { ok: false, problems: [problem] };
   }
-
-  return { ok: true, result: parsed.data };
+  return { ok: true, value: cleanUp(parsed.data) };
 }
 
-const UPSTREAM_ERRORS = {
-  rate_limited: 'rate_limited',
-  timeout: 'ai_timeout',
-  unavailable: 'ai_unavailable',
-} as const;
+/** Checks the answer of the final summary call of a chunked analysis. */
+export function validateSummaryOutput(rawText: string): Validation<string> {
+  const parsedJson = parseJson(rawText);
+  const parsed = parsedJson.ok ? SummaryOutputSchema.safeParse(parsedJson.json) : null;
+  if (!parsed?.success) {
+    return { ok: false, problems: ['The answer must be a JSON object with a "summary" string.'] };
+  }
+  const problem = summaryProblem(parsed.data.summary);
+  return problem === null
+    ? { ok: true, value: parsed.data.summary }
+    : { ok: false, problems: [problem] };
+}
 
-/** Milliseconds left of the request budget; created once per request. */
-type Budget = () => number;
+/** Distinct models in the order they were used, e.g. "claude-haiku-5-5 + gemini-3.6-flash". */
+function describeModels(models: readonly string[]): string {
+  return [...new Set(models)].join(' + ');
+}
 
-type ModelOutcome = { ok: true; result: AnalysisResult } | { ok: false; error: AnalyzeError };
-
-/**
- * One model: first call, and — if the answer is invalid and enough budget is left — exactly one
- * retry in which the model sees its previous answer and the list of problems.
- */
-async function analyzeWithModel(
+/** Documents up to the chunking threshold: one call on the chain. */
+async function analyzeWhole(
   request: AnalyzeRequest,
-  apiKey: string,
-  model: string,
-  remaining: Budget,
-): Promise<ModelOutcome> {
-  const messages: GeminiMessage[] = [{ role: 'user', text: buildUserPrompt(request.text) }];
-  const maxAttempts = 2;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const response = await callGemini({
-      apiKey,
-      model,
+  providers: readonly ModelProvider[],
+  remaining: Remaining,
+  stats: CallStats,
+) {
+  const outcome = await runChain(
+    providers,
+    {
       systemInstruction: SYSTEM_INSTRUCTION,
-      messages,
-      timeoutMs: Math.min(remaining(), CALL_TIMEOUT_CAP_MS),
-    });
-    if (!response.ok) {
-      return { ok: false, error: UPSTREAM_ERRORS[response.error] };
-    }
-
-    const validation = validateModelOutput(response.text, request);
-    if (validation.ok) {
-      return { ok: true, result: validation.result };
-    }
-    // No time for a useful retry: report the invalid answer now instead of timing out later.
-    if (remaining() < MIN_CALL_BUDGET_MS) {
-      break;
-    }
-
-    messages.push(
-      // Gemini rejects empty parts, so an empty answer is replaced with a short marker.
-      { role: 'model', text: response.text === '' ? '(empty answer)' : response.text },
-      { role: 'user', text: buildRetryPrompt(validation.problems) },
-    );
-  }
-
-  return { ok: false, error: 'ai_invalid_response' };
+      userPrompt: buildUserPrompt(request.text),
+      output: 'analysis',
+      validate: (raw) => validateModelOutput(raw, request),
+      minCallBudgetMs: MIN_CALL_BUDGET_MS,
+    },
+    remaining,
+    stats,
+  );
+  return outcome.ok
+    ? { ok: true as const, result: outcome.value, model: outcome.model, chunks: 1 }
+    : outcome;
 }
 
 /**
- * Analyzes the document with Gemini, within one shared time budget (REQUEST_BUDGET_MS).
- * - Upstream failure of a model (503 "high demand", timeout, 429 — every model has its own quota)
- *   → the next model in `options.models` is tried, if at least MIN_CALL_BUDGET_MS is left.
- *   When every model failed, the last model's error is returned.
- * - Invalid answer → exactly one retry with the same model, then `ai_invalid_response`
- *   (a different model would not be more likely to follow the schema, so no fallback here).
+ * F-08: chunks are analyzed in parallel (each on the chain, within the same deadline), merged
+ * deterministically, and the summary is rewritten from the chunk summaries by one short call.
+ * Any failed chunk fails the request — a result silently missing part of the document would mislead.
+ * When the summary call fails or there is no time left, the first chunk's (valid) summary stays.
+ */
+async function analyzeInChunks(
+  request: AnalyzeRequest,
+  providers: readonly ModelProvider[],
+  remaining: Remaining,
+  stats: CallStats,
+) {
+  const chunks = splitIntoChunks(request.text);
+  const outcomes = await Promise.all(
+    chunks.map((chunk, index) =>
+      runChain(
+        providers,
+        {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          userPrompt: buildChunkUserPrompt(chunk, index, chunks.length),
+          output: 'analysis',
+          validate: (raw) => validateModelOutput(raw, request),
+          minCallBudgetMs: MIN_CALL_BUDGET_MS,
+        },
+        remaining,
+        stats,
+      ),
+    ),
+  );
+
+  const results: AnalysisResult[] = [];
+  const models: string[] = [];
+  for (const outcome of outcomes) {
+    if (!outcome.ok) {
+      return outcome;
+    }
+    results.push(outcome.value);
+    models.push(outcome.model);
+  }
+
+  const merged = mergeChunkResults(results);
+  if (remaining() >= MIN_SUMMARY_BUDGET_MS) {
+    const summary = await runChain(
+      providers,
+      {
+        systemInstruction: SUMMARY_SYSTEM_INSTRUCTION,
+        userPrompt: buildSummaryUserPrompt(results.map((result) => result.summary)),
+        output: 'summary',
+        validate: validateSummaryOutput,
+        minCallBudgetMs: MIN_SUMMARY_BUDGET_MS,
+      },
+      remaining,
+      stats,
+    );
+    if (summary.ok) {
+      merged.summary = summary.value;
+      models.push(summary.model);
+    }
+  }
+  return {
+    ok: true as const,
+    result: merged,
+    model: describeModels(models),
+    chunks: chunks.length,
+  };
+}
+
+/**
+ * Analyzes the document within one shared time budget (REQUEST_BUDGET_MS), on the provider chain
+ * (chain.ts). Long documents are split into chunks (chunking.ts).
  */
 export async function analyzeDocument(
   request: AnalyzeRequest,
@@ -159,34 +247,21 @@ export async function analyzeDocument(
 ): Promise<AnalyzeOutcome> {
   const now = options.now ?? Date.now;
   const startedAt = now();
-  const remaining: Budget = () => REQUEST_BUDGET_MS - (now() - startedAt);
+  const remaining: Remaining = () => REQUEST_BUDGET_MS - (now() - startedAt);
+  const stats = emptyStats();
 
-  let lastError: AnalyzeError = 'ai_unavailable';
-  for (const [index, model] of options.models.entries()) {
-    if (index > 0 && remaining() < MIN_CALL_BUDGET_MS) {
-      break;
-    }
+  const outcome = needsChunking(request.text)
+    ? await analyzeInChunks(request, options.providers, remaining, stats)
+    : await analyzeWhole(request, options.providers, remaining, stats);
 
-    const outcome = await analyzeWithModel(request, options.apiKey, model, remaining);
-    if (outcome.ok) {
-      const meta: AnalyzeMeta = {
-        model,
-        promptVersion: PROMPT_VERSION,
-        durationMs: now() - startedAt,
-      };
-      return { ok: true, result: outcome.result, meta };
-    }
-    if (outcome.error === 'ai_invalid_response') {
-      return { ok: false, error: outcome.error };
-    }
-    lastError = outcome.error;
+  if (!outcome.ok) {
+    return { ok: false, error: outcome.error, stats };
   }
-
-  return { ok: false, error: lastError };
-}
-
-/** Primary + fallback model from the config, without empty or duplicate entries. */
-export function modelsFromConfig(primary: string, fallback: string | undefined): string[] {
-  const models = [primary, fallback ?? ''].map((model) => model.trim());
-  return models.filter((model, index) => model !== '' && models.indexOf(model) === index);
+  const meta: AnalyzeMeta = {
+    model: outcome.model,
+    promptVersion: PROMPT_VERSION,
+    durationMs: now() - startedAt,
+    chunks: outcome.chunks,
+  };
+  return { ok: true, result: outcome.result, meta, stats };
 }

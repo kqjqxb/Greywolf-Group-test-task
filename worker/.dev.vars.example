@@ -1,3 +1,4 @@
 GEMINI_API_KEY=your-key-here
+ANTHROPIC_API_KEY=your-key-here
 # Local override of the production value in wrangler.toml [vars].
 ALLOWED_ORIGIN=http://localhost:5173

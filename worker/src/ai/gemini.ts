@@ -1,37 +1,9 @@
 import { z } from 'zod';
-import { AnalysisResultSchema, DocumentInfoSchema } from '../../../src/lib/schema';
+import { OUTPUT_SCHEMAS, type OutputKind } from './outputSchema';
+import type { ModelProvider, ProviderCall, ProviderResult } from './provider';
 
 /** Gemini REST API (generateContent), called with plain fetch — no SDK. */
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-
-/** Per-call timeout. Keeps one attempt well below the 30 s Definition of Done. */
-export const GEMINI_TIMEOUT_MS = 20_000;
-
-/** One turn of the conversation sent to Gemini. */
-export interface GeminiMessage {
-  role: 'user' | 'model';
-  text: string;
-}
-
-export interface GeminiRequest {
-  apiKey: string;
-  model: string;
-  systemInstruction: string;
-  messages: readonly GeminiMessage[];
-  timeoutMs?: number;
-}
-
-/** Outcome of one call. Errors carry only a category — never the upstream message or the key. */
-export type GeminiResult =
-  { ok: true; text: string } | { ok: false; error: 'rate_limited' | 'timeout' | 'unavailable' };
-
-/**
- * What the model must produce: the contract result without `fileName` and `pages`
- * (the worker fills those from the request).
- */
-export const ModelOutputSchema = AnalysisResultSchema.extend({
-  document: DocumentInfoSchema.omit({ fileName: true, pages: true }),
-});
 
 /** JSON Schema keywords that Gemini's structured output does not support (or we do not want to send). */
 const UNSUPPORTED_SCHEMA_KEYS = new Set(['$schema', 'pattern']);
@@ -54,11 +26,14 @@ function stripUnsupportedKeys(value: unknown): unknown {
 }
 
 /**
- * Response schema for Gemini, derived from the Zod contract (single source of truth).
+ * Response schemas for Gemini, derived from the Zod contract (single source of truth).
  * `pattern` is dropped (regexes are checked by Zod afterwards); `format: "date"`, enums,
  * `minItems`/`maxItems` and nullable `anyOf` are kept because Gemini supports them.
  */
-export const RESPONSE_JSON_SCHEMA = stripUnsupportedKeys(z.toJSONSchema(ModelOutputSchema));
+export const GEMINI_RESPONSE_SCHEMAS: Record<OutputKind, unknown> = {
+  analysis: stripUnsupportedKeys(z.toJSONSchema(OUTPUT_SCHEMAS.analysis)),
+  summary: stripUnsupportedKeys(z.toJSONSchema(OUTPUT_SCHEMAS.summary)),
+};
 
 /** The part of the generateContent response we read; everything else is ignored. */
 const GenerateContentResponseSchema = z.object({
@@ -77,18 +52,19 @@ const GenerateContentResponseSchema = z.object({
     .optional(),
 });
 
-function buildBody(request: GeminiRequest): string {
+function buildBody(request: ProviderCall): string {
   return JSON.stringify({
     systemInstruction: { parts: [{ text: request.systemInstruction }] },
     contents: request.messages.map((message) => ({
-      role: message.role,
+      // Gemini calls the assistant role "model".
+      role: message.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: message.text }],
     })),
     generationConfig: {
       // Low temperature for repeatable extraction (newer models may ignore it).
       temperature: 0.1,
       responseMimeType: 'application/json',
-      responseJsonSchema: RESPONSE_JSON_SCHEMA,
+      responseJsonSchema: GEMINI_RESPONSE_SCHEMAS[request.output],
       // Gemini 3 models think dynamically by default, which can push a 12-page document
       // close to the timeout. Extraction needs little reasoning, so "LOW" keeps latency down.
       // (thinkingLevel is a Gemini 3+ option; older models would need thinkingBudget instead.)
@@ -102,15 +78,19 @@ function buildBody(request: GeminiRequest): string {
  * Returns the model's raw text (expected to be JSON); an empty string when the model returned nothing,
  * so the caller treats it as an invalid answer.
  */
-export async function callGemini(request: GeminiRequest): Promise<GeminiResult> {
+export async function callGemini(
+  apiKey: string,
+  model: string,
+  request: ProviderCall,
+): Promise<ProviderResult> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), request.timeoutMs ?? GEMINI_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), request.timeoutMs);
   try {
     const response = await fetch(
-      `${GEMINI_BASE_URL}/${encodeURIComponent(request.model)}:generateContent`,
+      `${GEMINI_BASE_URL}/${encodeURIComponent(model)}:generateContent`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': request.apiKey },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: buildBody(request),
         signal: controller.signal,
       },
@@ -140,4 +120,13 @@ export async function callGemini(request: GeminiRequest): Promise<GeminiResult> 
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Gemini model as a provider of the chain (free tier, so it does not use the Claude budget). */
+export function createGeminiProvider(apiKey: string, model: string): ModelProvider {
+  return {
+    model,
+    paid: false,
+    call: (request) => callGemini(apiKey, model, request),
+  };
 }

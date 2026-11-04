@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Env } from './env';
 import worker from './index';
 import { clientKey, type RateLimiter } from './rateLimit';
+import { FakeKv } from './testing/fakeKv';
 
 const ORIGIN = 'https://kqjqxb.github.io';
 
@@ -23,6 +24,7 @@ function makeEnv(limiter: RateLimiter): Env {
     GEMINI_MODEL: 'primary',
     GEMINI_FALLBACK_MODEL: 'fallback',
     ANALYZE_RATE_LIMITER: limiter,
+    PDF_INSIGHT_KV: new FakeKv(),
   };
 }
 
