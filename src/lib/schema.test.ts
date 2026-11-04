@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sampleResult } from './fixtures/sample-result';
+import { sampleResultLong } from './fixtures/sample-result-long';
 import { AnalysisResultSchema, AnalyzeRequestSchema, type AnalysisResult } from './schema';
 
 /** Deep copy of the valid fixture, so each test can break one thing. */
@@ -14,6 +15,10 @@ function isValid(value: unknown): boolean {
 describe('AnalysisResultSchema', () => {
   it('accepts the sample fixture', () => {
     expect(isValid(sampleResult)).toBe(true);
+  });
+
+  it('accepts the long dev fixture', () => {
+    expect(isValid(sampleResultLong)).toBe(true);
   });
 
   it('accepts null title/date and empty arrays (missing information)', () => {
