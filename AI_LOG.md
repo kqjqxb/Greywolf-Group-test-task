@@ -74,6 +74,8 @@ Trzy warstwy ochrony budżetu: kredyt prepaid (twardy limit), dzienny licznik wy
 | 20 | Mój kontrakt `docs/DESIGN.md` miał wartości, które nie przechodziły AA: `--border-strong` #8A93B8 (2,82:1) i plamy tła 25% w ciemnym motywie (3 pary < 4,5:1) | rozszerzony test kontrastu (67 par, także tekst na tle pod plamami gradientu) | agent zgłosił odchylenie zamiast „poprawiać na oko”: #707A9F, plamy 16% — kontrakt + test > deklaracja |
 | 21 | Zgadnięte metryki fontu zapasowego (`size-adjust: 104%`) — 3,6% za szeroko → przesunięcie układu po załadowaniu Manrope | pomiar w Chrome | zmierzone wartości (99,2% / 107,5% / 30,3%), CLS = 0 |
 | 22 | Druk: szklany nagłówek zostawał szary (trwająca animacja), ikony w kolorze | podgląd wydruku | wyłączone przejścia w `@media print`, wszystko czarne |
+| 23 | Kolejność reguł CSS: `.entity-list--people { display: grid }` przed `.entity-list { display: flex }` — późniejsza reguła wygrywała | wysokość karty „Podmioty” się nie zmieniła (482 px) | przeniesienie reguły; pomiar zamiast oceny „na oko” |
+| 24 | Breakpoint oparty o szerokość okna nie widział, że oś czasu w połówce karty jest za wąska (konteksty w 3–4 liniach) | zrzuty na 900 px | container query na samej osi czasu |
 
 ## Wnioski
 - **Kontekst w repo > pamięć czatu.** Każdy wykonawca startował bez historii i dostawał to samo: `CLAUDE.md` (twarde reguły), `docs/BRIEF.md` (specyfikacja + pułapki test PDF), `PLAN.md` (stan). Dzięki temu żadna z sesji wykonawców nie „rozjechała się” z wymaganiami, mimo że nie znały poprzednich rozmów.
