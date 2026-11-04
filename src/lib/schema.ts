@@ -66,8 +66,22 @@ export const AnalysisResultSchema = z.object({
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 export type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
 
+/** Diagnostics about how the result was produced (not part of the exported JSON result). */
+export const AnalyzeMetaSchema = z.object({
+  /** Gemini model that produced the result (the primary or the fallback model). */
+  model: z.string(),
+  /** Version of the worker prompt (worker/src/ai/prompt.ts). */
+  promptVersion: z.string(),
+  /** Time the worker spent on the AI part of the request, in milliseconds. */
+  durationMs: z.number(),
+});
+export type AnalyzeMeta = z.infer<typeof AnalyzeMetaSchema>;
+
 /** Successful `POST /analyze` response body. */
-export const AnalyzeResponseSchema = z.object({ result: AnalysisResultSchema });
+export const AnalyzeResponseSchema = z.object({
+  result: AnalysisResultSchema,
+  meta: AnalyzeMetaSchema.optional(),
+});
 export type AnalyzeResponse = z.infer<typeof AnalyzeResponseSchema>;
 
 /** Error codes the worker can return as `{ error: <code> }` (frontend maps them to Polish messages). */
