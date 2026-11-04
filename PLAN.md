@@ -24,9 +24,9 @@ Zasada: najpierw działający end-to-end „szkielet” na produkcji, potem jako
 - [x] `.gitignore`, `.env.example`
 
 ### Etap 1 — Walking skeleton na produkcji (≈3 h) ⚠️ priorytet
-- [ ] Worker: endpoint `POST /analyze` (na razie stub), CORS allowlist
-- [ ] GitHub Actions: lint › typecheck › test › build › deploy Pages
-- [ ] `base` w vite.config, `VITE_API_URL` jako secret/variable w Actions
+- [x] Worker: endpoint `POST /analyze` (na razie stub, 501), CORS allowlist (lista po przecinku, dokładne dopasowanie), limit body 2 MB, `GET /health`
+- [x] GitHub Actions: lint › typecheck › test › build › deploy Pages (`.github/workflows/deploy.yml`)
+- [x] `base` w vite.config, `VITE_API_URL` jako variable w Actions (w kodzie; zmienną trzeba ustawić w ustawieniach repo)
 - [ ] Deploy workera (`wrangler deploy`), klucz przez `wrangler secret put`
 - [ ] ✅ Kryterium: front na Pages woła worker i dostaje odpowiedź
 

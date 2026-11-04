@@ -22,7 +22,9 @@ Efekt: streszczenie wymagań + wykrycie pułapek w test PDF (prompt injection na
 ## Błędy AI i poprawki
 | # | Co AI zrobiło źle | Jak wykryto | Poprawka |
 |---|---|---|---|
-| 1 | | | |
+| 1 | Agent instalował wszystkie pakiety w najnowszych wersjach bez sprawdzenia kompatybilności → `npm install` padł (ERESOLVE: eslint-plugin-react nie wspiera ESLint 10; typescript-eslint wymaga TS < 6.1) | błąd instalacji | przypięte `eslint@9`, `typescript@~6.0`, powód zapisany w CLAUDE.md, żeby kolejne sesje agenta tego nie „naprawiały” |
+| 3 | `@cloudflare/workers-types` typuje `request.body` jako `ReadableStream<any>` — `tsc` przechodził, ale `any` przeciekało do kodu workera | type-aware ESLint (3× `no-unsafe-*`) | jawne `as ReadableStream<Uint8Array>` z komentarzem; dowód, że sam `tsc` nie wystarcza do reguły „zero any” |
+| 2 | `npm install` uruchomiony przed utworzeniem `.gitignore` → VS Code pokazał ~10K zmian (node_modules) | licznik zmian w IDE | weryfikacja `git status` przed commitem; zasada: commit tylko po review diffu |
 
 ## Wnioski
 _(na koniec)_
