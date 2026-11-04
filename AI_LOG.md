@@ -71,6 +71,9 @@ Trzy warstwy ochrony budżetu: kredyt prepaid (twardy limit), dzienny licznik wy
 | 17 | Test kontrastu importował `index.css?raw`, ale Vitest zamienia importy CSS na pusty string → wszystkie pary „padały” | podejrzanie 100% błędów | odczyt pliku przez `node:fs` |
 | 18 | Projekt focus ringu przełącznika motywu na niebieskim tle zaznaczonej opcji — < 3:1 | test kontrastu | ring przeniesiony na zewnątrz, na tło nagłówka |
 | 19 | Test kontrastu wykrył 2 STARE błędy z wcześniejszych etapów: focus ring (~2:1) i ramka ostrzeżenia (~2,7:1) w jasnym motywie | automatyczny test zamiast „na oko” | nowe kolory `#b45309`; dowód, że wcześniejsze „WCAG AA” agentów było deklaracją bez pomiaru |
+| 20 | Mój kontrakt `docs/DESIGN.md` miał wartości, które nie przechodziły AA: `--border-strong` #8A93B8 (2,82:1) i plamy tła 25% w ciemnym motywie (3 pary < 4,5:1) | rozszerzony test kontrastu (67 par, także tekst na tle pod plamami gradientu) | agent zgłosił odchylenie zamiast „poprawiać na oko”: #707A9F, plamy 16% — kontrakt + test > deklaracja |
+| 21 | Zgadnięte metryki fontu zapasowego (`size-adjust: 104%`) — 3,6% za szeroko → przesunięcie układu po załadowaniu Manrope | pomiar w Chrome | zmierzone wartości (99,2% / 107,5% / 30,3%), CLS = 0 |
+| 22 | Druk: szklany nagłówek zostawał szary (trwająca animacja), ikony w kolorze | podgląd wydruku | wyłączone przejścia w `@media print`, wszystko czarne |
 
 ## Wnioski
 - **Kontekst w repo > pamięć czatu.** Każdy wykonawca startował bez historii i dostawał to samo: `CLAUDE.md` (twarde reguły), `docs/BRIEF.md` (specyfikacja + pułapki test PDF), `PLAN.md` (stan). Dzięki temu żadna z sesji wykonawców nie „rozjechała się” z wymaganiami, mimo że nie znały poprzednich rozmów.
