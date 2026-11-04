@@ -7,10 +7,11 @@ Aplikacja webowa, która wczytuje plik PDF, tworzy krótkie podsumowanie i zamie
 ![PDF Insight — wynik analizy](docs/screenshots/result-light-desktop.png)
 
 <details>
-<summary>Więcej zrzutów (ciemny motyw, 360 px)</summary>
+<summary>Więcej zrzutów (ciemny motyw, 360 px, ekran startowy)</summary>
 
 ![Ciemny motyw](docs/screenshots/result-dark-desktop.png)
 ![Telefon 360 px](docs/screenshots/result-light-360.png)
+![Ekran startowy z polem do wgrania pliku](docs/screenshots/empty-light-desktop.png)
 
 </details>
 
