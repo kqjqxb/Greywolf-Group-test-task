@@ -1,6 +1,6 @@
 import { MAX_REQUEST_BODY_BYTES } from '../../../src/lib/limits';
 import { AnalyzeRequestSchema, type AnalyzeResponse } from '../../../src/lib/schema';
-import { analyzeDocument, type AnalyzeOutcome } from '../ai/analyze';
+import { analyzeDocument, modelsFromConfig, type AnalyzeOutcome } from '../ai/analyze';
 import type { Env } from '../env';
 import { errorResponse, isJsonContentType, json, readTextWithLimit } from '../http';
 
@@ -16,7 +16,8 @@ const ERROR_STATUS: Record<AnalyzeError, number> = {
 
 /**
  * `POST /analyze` — validates the request, analyzes the text with Gemini and returns
- * `{ result }` (validated AnalysisResult). The origin is already checked by the router.
+ * `{ result, meta }` (validated AnalysisResult + diagnostics). Origin and rate limit are
+ * already checked by the router.
  */
 export async function handleAnalyze(request: Request, env: Env): Promise<Response> {
   if (!isJsonContentType(request.headers.get('Content-Type'))) {
@@ -42,11 +43,11 @@ export async function handleAnalyze(request: Request, env: Env): Promise<Respons
 
   const outcome = await analyzeDocument(parsed.data, {
     apiKey: env.GEMINI_API_KEY,
-    model: env.GEMINI_MODEL,
+    models: modelsFromConfig(env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODEL),
   });
   if (!outcome.ok) {
     return errorResponse(outcome.error, ERROR_STATUS[outcome.error]);
   }
-  const responseBody: AnalyzeResponse = { result: outcome.result };
+  const responseBody: AnalyzeResponse = { result: outcome.result, meta: outcome.meta };
   return json(responseBody);
 }

@@ -13,6 +13,27 @@ export function errorResponse(code: ApiErrorCode, status: number): Response {
   return json({ error: code }, status);
 }
 
+/**
+ * Headers added to every API response:
+ * - nosniff: browsers must treat the JSON as JSON, never guess another type (e.g. HTML);
+ * - no-store: analysis results are private and must not be kept by browser or proxy caches;
+ * - no-referrer: nothing from our URLs leaks to other sites.
+ */
+export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
+  'X-Content-Type-Options': 'nosniff',
+  'Cache-Control': 'no-store',
+  'Referrer-Policy': 'no-referrer',
+};
+
+/** Returns a copy of the response with SECURITY_HEADERS set. */
+export function withSecurityHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    headers.set(name, value);
+  }
+  return new Response(response.body, { status: response.status, headers });
+}
+
 /** True when the Content-Type is application/json (parameters such as charset are allowed). */
 export function isJsonContentType(contentType: string | null): boolean {
   if (contentType === null) {

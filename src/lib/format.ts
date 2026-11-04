@@ -2,10 +2,18 @@ import type { DocumentType } from './schema';
 
 const LOCALE = 'pl-PL';
 
-/** "12500, PLN" → "12 500,00 zł". Falls back to "12500 XYZ" if Intl rejects the code. */
+/**
+ * "12500, PLN" → "12 500,00 zł". Falls back to "12500 XYZ" if Intl rejects the code.
+ * `useGrouping: 'always'`: by default pl-PL does not group 4-digit numbers ("8600,00 €"),
+ * which looks inconsistent next to "184 500,00 zł" in the same list.
+ */
 export function formatAmount(value: number, currency: string): string {
   try {
-    return new Intl.NumberFormat(LOCALE, { style: 'currency', currency }).format(value);
+    return new Intl.NumberFormat(LOCALE, {
+      style: 'currency',
+      currency,
+      useGrouping: 'always',
+    }).format(value);
   } catch {
     return `${value} ${currency}`;
   }

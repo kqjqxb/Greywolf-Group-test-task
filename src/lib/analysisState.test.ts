@@ -3,6 +3,7 @@ import { analysisReducer, initialAnalysisState, isBusy, type AnalysisState } fro
 import { sampleResult } from './fixtures/sample-result';
 
 const file = new File(['%PDF-'], 'umowa.pdf', { type: 'application/pdf' });
+const findings = { emptyPages: [11], injectionSuspected: true };
 
 describe('analysisReducer', () => {
   it('goes through the happy path idle → reading → analyzing → success', () => {
@@ -11,11 +12,11 @@ describe('analysisReducer', () => {
     expect(state).toEqual({ status: 'reading', file, startedAt: 1000 });
     expect(isBusy(state)).toBe(true);
 
-    state = analysisReducer(state, { type: 'extracted', emptyPages: [11] });
-    expect(state).toEqual({ status: 'analyzing', file, startedAt: 1000, emptyPages: [11] });
+    state = analysisReducer(state, { type: 'extracted', findings });
+    expect(state).toEqual({ status: 'analyzing', file, startedAt: 1000, findings });
 
     state = analysisReducer(state, { type: 'succeeded', result: sampleResult });
-    expect(state).toEqual({ status: 'success', file, result: sampleResult, emptyPages: [11] });
+    expect(state).toEqual({ status: 'success', file, result: sampleResult, findings });
     expect(isBusy(state)).toBe(false);
   });
 
@@ -27,7 +28,7 @@ describe('analysisReducer', () => {
   });
 
   it('ignores out-of-order events', () => {
-    expect(analysisReducer(initialAnalysisState, { type: 'extracted', emptyPages: [] })).toBe(
+    expect(analysisReducer(initialAnalysisState, { type: 'extracted', findings })).toBe(
       initialAnalysisState,
     );
     expect(analysisReducer(initialAnalysisState, { type: 'succeeded', result: sampleResult })).toBe(

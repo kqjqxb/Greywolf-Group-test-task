@@ -6,6 +6,13 @@ export interface Env {
    * Set in wrangler.toml [vars]; overridden locally in worker/.dev.vars.
    */
   ALLOWED_ORIGIN: string;
-  /** Gemini model id, e.g. "gemini-3.6-flash". Public, set in wrangler.toml [vars]. */
+  /** Primary Gemini model id, e.g. "gemini-3.6-flash". Public, set in wrangler.toml [vars]. */
   GEMINI_MODEL: string;
+  /**
+   * Model tried when the primary one is unavailable, times out or hits its quota (429).
+   * Public, set in wrangler.toml [vars]; an empty value disables the fallback.
+   */
+  GEMINI_FALLBACK_MODEL?: string;
+  /** Cloudflare Rate Limiting binding for `POST /analyze` (wrangler.toml [[ratelimits]]). */
+  ANALYZE_RATE_LIMITER: RateLimit;
 }
