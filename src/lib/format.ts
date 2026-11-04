@@ -1,3 +1,4 @@
+import { isYearMonth } from './isoDate';
 import type { DocumentType } from './schema';
 
 const LOCALE = 'pl-PL';
@@ -20,15 +21,20 @@ export function formatAmount(value: number, currency: string): string {
 }
 
 /**
- * "2026-10-01" → "1 października 2026". Formatted in UTC, because a plain ISO date parsed
- * as local time could shift to the previous day in timezones west of UTC.
+ * "2026-10-01" → "1 października 2026"; "2026-10" (month and year only) → "październik 2026"
+ * (nominative, as Intl gives for a month without a day). Formatted in UTC, because a plain ISO
+ * date parsed as local time could shift to the previous day in timezones west of UTC.
  */
 export function formatDate(isoDate: string): string {
-  const date = new Date(`${isoDate}T00:00:00Z`);
+  const yearMonth = isYearMonth(isoDate);
+  const date = new Date(`${yearMonth ? `${isoDate}-01` : isoDate}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) {
     return isoDate;
   }
-  return new Intl.DateTimeFormat(LOCALE, { dateStyle: 'long', timeZone: 'UTC' }).format(date);
+  const options: Intl.DateTimeFormatOptions = yearMonth
+    ? { month: 'long', year: 'numeric', timeZone: 'UTC' }
+    : { dateStyle: 'long', timeZone: 'UTC' };
+  return new Intl.DateTimeFormat(LOCALE, options).format(date);
 }
 
 /** "pl" → "polski". Falls back to the raw code. */
